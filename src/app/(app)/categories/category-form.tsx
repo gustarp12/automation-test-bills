@@ -66,7 +66,7 @@ export default function CategoryForm({ canCreateSystem, locale }: CategoryFormPr
           <select
             name="scope"
             className="mt-2 w-full rounded-xl border border-slate-800 bg-slate-950/80 px-4 py-2.5 text-sm text-slate-100 outline-none focus:border-emerald-400"
-            defaultValue="personal"
+            defaultValue="system"
           >
             <option value="personal">{t(locale, "categories.personal")}</option>
             <option value="system">{t(locale, "categories.system")}</option>

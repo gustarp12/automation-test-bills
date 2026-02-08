@@ -6,9 +6,20 @@ import LanguageSwitcher from "@/components/language-switcher";
 import SignOutButton from "@/components/sign-out-button";
 import { t } from "@/lib/i18n";
 import { getLocale } from "@/lib/i18n-server";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const locale = await getLocale();
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const { data: profile } = user
+    ? await supabase.from("profiles").select("is_admin").eq("id", user.id).single()
+    : { data: null };
+
+  const isAdmin = Boolean(profile?.is_admin);
 
   return (
     <LocaleProvider locale={locale}>
@@ -23,15 +34,19 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
                 <Link className="hover:text-slate-200" href="/expenses">
                   {t(locale, "nav.expenses")}
                 </Link>
-                <Link className="hover:text-slate-200" href="/categories">
-                  {t(locale, "nav.categories")}
-                </Link>
-                <Link className="hover:text-slate-200" href="/merchants">
-                  {t(locale, "nav.merchants")}
-                </Link>
-                <Link className="hover:text-slate-200" href="/currencies">
-                  {t(locale, "nav.currencies")}
-                </Link>
+                {isAdmin ? (
+                  <>
+                    <Link className="hover:text-slate-200" href="/categories">
+                      {t(locale, "nav.categories")}
+                    </Link>
+                    <Link className="hover:text-slate-200" href="/merchants">
+                      {t(locale, "nav.merchants")}
+                    </Link>
+                    <Link className="hover:text-slate-200" href="/currencies">
+                      {t(locale, "nav.currencies")}
+                    </Link>
+                  </>
+                ) : null}
               </nav>
             </div>
             <div className="flex items-center gap-3">

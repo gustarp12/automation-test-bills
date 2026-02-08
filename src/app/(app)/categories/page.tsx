@@ -41,6 +41,10 @@ export default async function CategoriesPage() {
 
   const isAdmin = Boolean(profile?.is_admin);
 
+  if (!isAdmin) {
+    redirect("/expenses");
+  }
+
   return (
     <div className="space-y-6">
       <div className="space-y-2">
