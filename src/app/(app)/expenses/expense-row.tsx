@@ -31,8 +31,8 @@ type ExpenseRowData = {
   fx_rate_to_dop: string | null;
   category_id: string | null;
   merchant_id: string | null;
-  merchants?: { name: string } | null;
-  categories?: { name: string } | null;
+  merchants?: { name?: string } | null;
+  categories?: { name?: string } | null;
 };
 
 type ExpenseRowProps = {

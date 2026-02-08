@@ -6,8 +6,8 @@ import { getLocale } from "@/lib/i18n-server";
 import { t } from "@/lib/i18n";
 
 type ExpenseRow = {
-  amount_dop: string;
-  categories?: { name: string } | null;
+  amount_dop: string | number | null;
+  categoryName: string | null;
 };
 
 export default async function DashboardPage() {
@@ -32,7 +32,7 @@ export default async function DashboardPage() {
   const lastMonthEndStr = lastMonthEnd.toISOString().slice(0, 10);
   const todayStr = now.toISOString().slice(0, 10);
 
-  const { data: thisMonthExpenses } = await supabase
+  const { data: thisMonthRaw } = await supabase
     .from("expenses")
     .select("amount_dop, categories(name)")
     .gte("expense_date", thisMonthStartStr)
@@ -44,7 +44,19 @@ export default async function DashboardPage() {
     .gte("expense_date", lastMonthStartStr)
     .lte("expense_date", lastMonthEndStr);
 
-  const thisMonthTotal = (thisMonthExpenses ?? []).reduce(
+  const thisMonthExpenses: ExpenseRow[] = (thisMonthRaw ?? []).map((row) => {
+    const categoriesValue = row.categories as { name?: string } | { name?: string }[] | null;
+    const categoryName = Array.isArray(categoriesValue)
+      ? categoriesValue[0]?.name ?? null
+      : categoriesValue?.name ?? null;
+
+    return {
+      amount_dop: row.amount_dop ?? 0,
+      categoryName,
+    };
+  });
+
+  const thisMonthTotal = thisMonthExpenses.reduce(
     (sum, row) => sum + Number(row.amount_dop ?? 0),
     0
   );
@@ -53,14 +65,11 @@ export default async function DashboardPage() {
     0
   );
 
-  const categoryTotals = (thisMonthExpenses as ExpenseRow[] | undefined)?.reduce(
-    (acc, row) => {
-      const key = row.categories?.name ?? "—";
-      acc[key] = (acc[key] ?? 0) + Number(row.amount_dop ?? 0);
-      return acc;
-    },
-    {} as Record<string, number>
-  );
+  const categoryTotals = thisMonthExpenses.reduce((acc, row) => {
+    const key = row.categoryName ?? "—";
+    acc[key] = (acc[key] ?? 0) + Number(row.amount_dop ?? 0);
+    return acc;
+  }, {} as Record<string, number>);
 
   const topCategory = categoryTotals
     ? Object.entries(categoryTotals).sort((a, b) => b[1] - a[1])[0]

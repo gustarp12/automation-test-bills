@@ -29,8 +29,8 @@ type ExpenseRowData = {
   fx_rate_to_dop: string | null;
   category_id: string | null;
   merchant_id: string | null;
-  merchants?: { name: string } | null;
-  categories?: { name: string } | null;
+  merchants?: { name?: string } | null;
+  categories?: { name?: string } | null;
 };
 
 type SearchParams = {
@@ -102,7 +102,26 @@ export default async function ExpensesPage({
     expensesQuery = expensesQuery.eq("currency", filters.currency.toUpperCase());
   }
 
-  const { data: expenses } = await expensesQuery;
+  const { data: expensesRaw } = await expensesQuery;
+
+  const expenses: ExpenseRowData[] = (expensesRaw ?? []).map((row) => {
+    const merchantsValue = row.merchants as { name?: string } | { name?: string }[] | null;
+    const categoriesValue = row.categories as { name?: string } | { name?: string }[] | null;
+
+    return {
+      id: row.id,
+      amount: row.amount,
+      currency: row.currency,
+      amount_dop: row.amount_dop,
+      expense_date: row.expense_date,
+      notes: row.notes ?? null,
+      fx_rate_to_dop: row.fx_rate_to_dop ?? null,
+      category_id: row.category_id ?? null,
+      merchant_id: row.merchant_id ?? null,
+      merchants: Array.isArray(merchantsValue) ? merchantsValue[0] ?? null : merchantsValue ?? null,
+      categories: Array.isArray(categoriesValue) ? categoriesValue[0] ?? null : categoriesValue ?? null,
+    };
+  });
 
   const exportParams = new URLSearchParams();
   if (filters.from) exportParams.set("from", filters.from);
@@ -239,12 +258,12 @@ export default async function ExpensesPage({
             <span className="col-span-1">{t(locale, "common.notes")}</span>
           </div>
           <div className="divide-y divide-slate-900/60">
-            {(expenses ?? []).length === 0 ? (
+            {expenses.length === 0 ? (
               <div className="px-4 py-6 text-sm text-slate-400">
                 {t(locale, "common.noExpenses")}
               </div>
             ) : (
-              (expenses as ExpenseRowData[]).map((expense) => (
+              expenses.map((expense) => (
                 <ExpenseRow
                   key={expense.id}
                   expense={expense}

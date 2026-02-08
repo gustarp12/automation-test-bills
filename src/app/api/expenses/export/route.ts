@@ -67,14 +67,25 @@ export async function GET(request: Request) {
     t(locale, "common.notes"),
   ];
 
-  const rows = (data ?? []).map((row) => [
-    toCsvValue(row.merchants?.name ?? ""),
-    toCsvValue(row.categories?.name ?? ""),
-    toCsvValue(row.expense_date),
-    toCsvValue(`${row.amount} ${row.currency}`),
-    toCsvValue(row.amount_dop),
-    toCsvValue(row.notes ?? ""),
-  ]);
+  const rows = (data ?? []).map((row) => {
+    const merchantsValue = row.merchants as { name?: string } | { name?: string }[] | null;
+    const categoriesValue = row.categories as { name?: string } | { name?: string }[] | null;
+    const merchantName = Array.isArray(merchantsValue)
+      ? merchantsValue[0]?.name ?? ""
+      : merchantsValue?.name ?? "";
+    const categoryName = Array.isArray(categoriesValue)
+      ? categoriesValue[0]?.name ?? ""
+      : categoriesValue?.name ?? "";
+
+    return [
+      toCsvValue(merchantName),
+      toCsvValue(categoryName),
+      toCsvValue(row.expense_date),
+      toCsvValue(`${row.amount} ${row.currency}`),
+      toCsvValue(row.amount_dop),
+      toCsvValue(row.notes ?? ""),
+    ];
+  });
 
   const csv = [header.join(","), ...rows.map((row) => row.join(","))].join("\n");
 
