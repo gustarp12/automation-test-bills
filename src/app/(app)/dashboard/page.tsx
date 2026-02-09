@@ -94,7 +94,40 @@ export default async function DashboardPage() {
   const topCategories = Object.entries(categoryTotals)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 5);
-  const maxCategoryTotal = Math.max(1, ...topCategories.map((item) => item[1]));
+  const topCategoryTotal = topCategories.reduce((sum, [, value]) => sum + value, 0);
+  const otherTotal = Math.max(0, thisMonthTotal - topCategoryTotal);
+  const categoryColors = ["#34d399", "#38bdf8", "#f59e0b", "#a78bfa", "#f472b6", "#22c55e"];
+  const categorySegments = [
+    ...topCategories.map(([name, total], index) => ({
+      name,
+      total,
+      color: categoryColors[index % categoryColors.length],
+    })),
+    ...(otherTotal > 0
+      ? [
+          {
+            name: t(locale, "dashboard.other"),
+            total: otherTotal,
+            color: categoryColors[5],
+          },
+        ]
+      : []),
+  ];
+
+  const donutGradient = (() => {
+    if (!thisMonthTotal || categorySegments.length === 0) {
+      return "conic-gradient(#1f2937 0% 100%)";
+    }
+    let current = 0;
+    const stops = categorySegments.map((segment) => {
+      const percent = (segment.total / thisMonthTotal) * 100;
+      const start = current;
+      const end = current + percent;
+      current = end;
+      return `${segment.color} ${start.toFixed(2)}% ${end.toFixed(2)}%`;
+    });
+    return `conic-gradient(${stops.join(", ")})`;
+  })();
 
   const trendStart = new Date(now.getFullYear(), now.getMonth() - 5, 1);
   const trendStartStr = trendStart.toISOString().slice(0, 10);
@@ -259,28 +292,49 @@ export default async function DashboardPage() {
             </p>
           </div>
           <div className="space-y-3">
-            {topCategories.length === 0 ? (
+            {categorySegments.length === 0 ? (
               <p className="text-xs text-slate-500">{t(locale, "dashboard.awaiting")}</p>
             ) : (
-              topCategories.map(([name, total]) => {
-                const width = Math.max(8, Math.round((total / maxCategoryTotal) * 100));
-                return (
-                  <div key={name} className="space-y-1">
-                    <div className="flex items-center justify-between text-xs text-slate-300">
-                      <span>{name}</span>
-                      <span>
-                        {formatCurrency(total, "DOP", locale)}
-                      </span>
-                    </div>
-                    <div className="h-2 w-full rounded-full bg-slate-800">
-                      <div
-                        className="h-full rounded-full bg-emerald-400/80"
-                        style={{ width: `${width}%` }}
-                      />
-                    </div>
+              <div className="flex flex-wrap items-center gap-6">
+                <div className="relative h-36 w-36">
+                  <div
+                    className="h-full w-full rounded-full"
+                    style={{ background: donutGradient }}
+                  />
+                  <div className="absolute inset-4 flex flex-col items-center justify-center rounded-full border border-slate-800 bg-slate-950/90 text-center text-xs text-slate-300">
+                    <span className="text-[10px] uppercase text-slate-500">
+                      {t(locale, "dashboard.thisMonth")}
+                    </span>
+                    <span className="mt-1 text-sm font-semibold text-slate-100">
+                      {formatCurrency(thisMonthTotal, "DOP", locale)}
+                    </span>
                   </div>
-                );
-              })
+                </div>
+                <div className="flex-1 space-y-2">
+                  {categorySegments.map((segment) => {
+                    const percent = thisMonthTotal
+                      ? Math.round((segment.total / thisMonthTotal) * 100)
+                      : 0;
+                    return (
+                      <div
+                        key={`${segment.name}-${segment.total}`}
+                        className="flex items-center justify-between text-xs text-slate-300"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="h-2.5 w-2.5 rounded-full"
+                            style={{ backgroundColor: segment.color }}
+                          />
+                          <span>{segment.name}</span>
+                        </div>
+                        <span>
+                          {formatCurrency(segment.total, "DOP", locale)} · {percent}%
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             )}
           </div>
 
