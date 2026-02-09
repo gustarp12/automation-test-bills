@@ -110,5 +110,6 @@ flowchart LR
 - `GET /api/expenses/export`
 - `POST /api/expenses/import`
 - `GET /api/incomes/export`
+- `POST /api/incomes/import`
 
 OpenAPI spec: `docs/openapi.yaml`

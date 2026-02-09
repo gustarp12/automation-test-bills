@@ -51,6 +51,33 @@ export default async function BudgetsPage({
     .eq("month", monthValue)
     .order("amount", { ascending: false });
 
+  const monthEnd = new Date(`${monthParam}-01`);
+  monthEnd.setMonth(monthEnd.getMonth() + 1);
+  monthEnd.setDate(0);
+  const monthEndStr = monthEnd.toISOString().slice(0, 10);
+
+  const { data: monthExpensesRange } = await supabase
+    .from("expenses")
+    .select("amount_dop")
+    .gte("expense_date", monthValue)
+    .lte("expense_date", monthEndStr);
+
+  const { data: monthIncomesRange } = await supabase
+    .from("incomes")
+    .select("amount_dop")
+    .gte("income_date", monthValue)
+    .lte("income_date", monthEndStr);
+
+  const monthExpenseTotal = (monthExpensesRange ?? []).reduce(
+    (sum, row) => sum + Number(row.amount_dop ?? 0),
+    0
+  );
+  const monthIncomeTotal = (monthIncomesRange ?? []).reduce(
+    (sum, row) => sum + Number(row.amount_dop ?? 0),
+    0
+  );
+  const monthNetTotal = monthIncomeTotal - monthExpenseTotal;
+
   const budgets = (budgetsRaw ?? []).map((row) => {
     const categoriesValue = row.categories as { name?: string } | { name?: string }[] | null;
     return {
@@ -69,6 +96,34 @@ export default async function BudgetsPage({
         </p>
         <h1 className="text-3xl font-semibold">{t(locale, "budgets.title")}</h1>
         <p className="text-sm text-slate-400">{t(locale, "budgets.subtitle")}</p>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-3">
+        <div className="rounded-2xl border border-slate-800/80 bg-slate-950/70 p-4 backdrop-blur">
+          <p className="text-xs uppercase text-slate-400">{t(locale, "budgets.income")}</p>
+          <p className="mt-2 text-2xl font-semibold text-emerald-300">
+            {formatCurrency(monthIncomeTotal, "DOP", locale)}
+          </p>
+          <p className="text-xs text-slate-500">{t(locale, "budgets.monthLabel")} {monthParam}</p>
+        </div>
+        <div className="rounded-2xl border border-slate-800/80 bg-slate-950/70 p-4 backdrop-blur">
+          <p className="text-xs uppercase text-slate-400">{t(locale, "budgets.expenses")}</p>
+          <p className="mt-2 text-2xl font-semibold">
+            {formatCurrency(monthExpenseTotal, "DOP", locale)}
+          </p>
+          <p className="text-xs text-slate-500">{t(locale, "budgets.monthLabel")} {monthParam}</p>
+        </div>
+        <div className="rounded-2xl border border-slate-800/80 bg-slate-950/70 p-4 backdrop-blur">
+          <p className="text-xs uppercase text-slate-400">{t(locale, "budgets.net")}</p>
+          <p
+            className={`mt-2 text-2xl font-semibold ${
+              monthNetTotal >= 0 ? "text-emerald-300" : "text-rose-300"
+            }`}
+          >
+            {formatCurrency(monthNetTotal, "DOP", locale)}
+          </p>
+          <p className="text-xs text-slate-500">{t(locale, "budgets.netNote")}</p>
+        </div>
       </div>
 
       <BudgetForm

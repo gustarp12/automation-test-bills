@@ -247,40 +247,100 @@ export default async function DashboardPage() {
     ? Math.min(100, Math.round((thisMonthTotal / budgetTotal) * 100))
     : null;
 
-  const renderTrend = (
-    title: string,
-    months: { key: string; label: string; total: number }[],
-    maxValue: number,
-    variant: "expense" | "income" | "net"
-  ) => {
-    const colorFor = (value: number) => {
-      if (variant === "expense") return "bg-sky-400/70";
-      if (variant === "income") return "bg-emerald-400/80";
-      return value >= 0 ? "bg-emerald-400/80" : "bg-rose-400/80";
-    };
+  const renderOverlayTrend = () => {
+    const maxOverlay = Math.max(1, maxExpenseTrendTotal, maxIncomeTrendTotal);
+    const lineHeight = 100;
+    const step = 100 / Math.max(1, trendMonths.length - 1);
+    const netPoints = netTrendMonths
+      .map((month, index) => {
+        const normalized = maxNetMagnitude
+          ? (month.total + maxNetMagnitude) / (maxNetMagnitude * 2)
+          : 0.5;
+        const y = Math.max(0, Math.min(lineHeight, lineHeight - normalized * lineHeight));
+        return `${index * step},${y}`;
+      })
+      .join(" ");
+
+    const zeroY = lineHeight / 2;
 
     return (
       <div className="space-y-3">
-        <p className="text-xs uppercase text-slate-400">{title}</p>
-        <div className="grid grid-cols-6 items-end gap-2">
-          {months.map((month) => {
-            const magnitude = Math.abs(month.total);
-            const height = maxValue
-              ? Math.max(6, Math.round((magnitude / maxValue) * 96))
-              : 6;
-            return (
-              <div key={month.key} className="flex flex-col items-center gap-2">
-                <div className="h-24 w-full rounded-full bg-slate-800/60">
-                  <div
-                    className={`w-full rounded-full ${colorFor(month.total)}`}
-                    style={{ height: `${height}%` }}
-                    title={formatCurrency(month.total, "DOP", locale)}
-                  />
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs uppercase text-slate-400">
+              {t(locale, "dashboard.overlayTrendTitle")}
+            </p>
+            <p className="text-xs text-slate-500">{t(locale, "dashboard.overlayTrendNote")}</p>
+          </div>
+          <span className="text-xs text-slate-500">{t(locale, "dashboard.trendSubtitle")}</span>
+        </div>
+
+        <div className="relative h-28">
+          <div className="grid h-full grid-cols-6 items-end gap-3">
+            {trendMonths.map((month, index) => {
+              const incomeValue = incomeTrendMonths[index]?.total ?? 0;
+              const expenseValue = month.total ?? 0;
+              const incomeHeight = Math.max(6, Math.round((incomeValue / maxOverlay) * 100));
+              const expenseHeight = Math.max(6, Math.round((expenseValue / maxOverlay) * 100));
+
+              return (
+                <div key={month.key} className="flex h-full flex-col items-center gap-2">
+                  <div className="flex h-full w-full items-end gap-1">
+                    <div className="flex h-full w-full items-end">
+                      <div
+                        className="w-full rounded-full bg-emerald-400/80"
+                        style={{ height: `${incomeHeight}%` }}
+                        title={formatCurrency(incomeValue, "DOP", locale)}
+                      />
+                    </div>
+                    <div className="flex h-full w-full items-end">
+                      <div
+                        className="w-full rounded-full bg-sky-400/70"
+                        style={{ height: `${expenseHeight}%` }}
+                        title={formatCurrency(expenseValue, "DOP", locale)}
+                      />
+                    </div>
+                  </div>
+                  <span className="text-xs text-slate-400">{month.label}</span>
                 </div>
-                <span className="text-xs text-slate-400">{month.label}</span>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
+          <svg
+            className="pointer-events-none absolute inset-0"
+            viewBox={`0 0 100 ${lineHeight}`}
+            preserveAspectRatio="none"
+          >
+            <line
+              x1="0"
+              y1={zeroY}
+              x2="100"
+              y2={zeroY}
+              stroke="rgba(148,163,184,0.2)"
+              strokeWidth="1"
+            />
+            <polyline
+              points={netPoints}
+              fill="none"
+              stroke="rgba(251,191,36,0.9)"
+              strokeWidth="2"
+            />
+          </svg>
+        </div>
+
+        <div className="flex flex-wrap gap-4 text-xs text-slate-400">
+          <span className="flex items-center gap-2">
+            <span className="h-2 w-2 rounded-full bg-emerald-400/80" />
+            {t(locale, "dashboard.incomeTrend")}
+          </span>
+          <span className="flex items-center gap-2">
+            <span className="h-2 w-2 rounded-full bg-sky-400/70" />
+            {t(locale, "dashboard.expenseTrend")}
+          </span>
+          <span className="flex items-center gap-2">
+            <span className="h-2 w-2 rounded-full bg-amber-300/90" />
+            {t(locale, "dashboard.netTrend")}
+          </span>
         </div>
       </div>
     );
@@ -372,32 +432,7 @@ export default async function DashboardPage() {
 
       <div className="grid gap-4 lg:grid-cols-3">
         <section className="rounded-2xl border border-slate-800/80 bg-slate-950/70 p-4 backdrop-blur lg:col-span-2">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold">{t(locale, "dashboard.trendsTitle")}</h2>
-            <span className="text-xs text-slate-500">
-              {t(locale, "dashboard.trendSubtitle")}
-            </span>
-          </div>
-          <div className="mt-4 grid gap-6 md:grid-cols-3">
-            {renderTrend(
-              t(locale, "dashboard.expenseTrend"),
-              trendMonths,
-              maxExpenseTrendTotal,
-              "expense"
-            )}
-            {renderTrend(
-              t(locale, "dashboard.incomeTrend"),
-              incomeTrendMonths,
-              maxIncomeTrendTotal,
-              "income"
-            )}
-            {renderTrend(
-              t(locale, "dashboard.netTrend"),
-              netTrendMonths,
-              maxNetMagnitude,
-              "net"
-            )}
-          </div>
+          {renderOverlayTrend()}
         </section>
 
         <section className="space-y-4 rounded-2xl border border-slate-800/80 bg-slate-950/70 p-4 backdrop-blur">

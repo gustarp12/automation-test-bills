@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import IncomeForm from "./income-form";
+import IncomeCsvImport from "./csv-import";
 import { deleteIncome } from "./actions";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { formatCurrency, formatDate } from "@/lib/format";
@@ -121,6 +122,7 @@ export default async function IncomesPage({
       </div>
 
       <IncomeForm currencies={activeCurrencies} locale={locale} />
+      <IncomeCsvImport currencies={activeCurrencies} locale={locale} />
 
       <section className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
