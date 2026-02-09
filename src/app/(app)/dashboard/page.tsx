@@ -53,6 +53,21 @@ const fetchBudgetsForMonth = cache(
   }
 );
 
+const fetchIncomesInRange = cache(
+  async (
+    supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+    start: string,
+    end: string
+  ) => {
+    const { data } = await supabase
+      .from("incomes")
+      .select("amount_dop, income_date")
+      .gte("income_date", start)
+      .lte("income_date", end);
+    return data ?? [];
+  }
+);
+
 export default async function DashboardPage() {
   const supabase = await createSupabaseServerClient();
   const {
@@ -81,6 +96,11 @@ export default async function DashboardPage() {
     lastMonthStartStr,
     lastMonthEndStr
   );
+  const thisMonthIncomes = await fetchIncomesInRange(
+    supabase,
+    thisMonthStartStr,
+    todayStr
+  );
 
   const thisMonthExpenses: ExpenseRow[] = (thisMonthRaw ?? []).map((row) => {
     const categoriesValue = row.categories as { name?: string } | { name?: string }[] | null;
@@ -103,6 +123,11 @@ export default async function DashboardPage() {
     (sum, row) => sum + Number(row.amount_dop ?? 0),
     0
   );
+  const thisMonthIncomeTotal = (thisMonthIncomes ?? []).reduce(
+    (sum, row) => sum + Number(row.amount_dop ?? 0),
+    0
+  );
+  const thisMonthNet = thisMonthIncomeTotal - thisMonthTotal;
   const lastMonthTotal = (lastMonthExpenses ?? []).reduce(
     (sum, row) => sum + Number(row.amount_dop ?? 0),
     0
@@ -204,7 +229,7 @@ export default async function DashboardPage() {
         <h1 className="text-3xl font-semibold">{t(locale, "dashboard.title")}</h1>
         <p className="text-sm text-slate-400">{t(locale, "dashboard.subtitle")}</p>
       </div>
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-3">
         <div className="rounded-2xl border border-slate-800/80 bg-slate-950/70 p-4 backdrop-blur">
           <p className="text-xs uppercase text-slate-400">{t(locale, "dashboard.thisMonth")}</p>
           <p className="mt-2 text-2xl font-semibold">
@@ -213,6 +238,30 @@ export default async function DashboardPage() {
           <p className="text-xs text-slate-500">
             {t(locale, "dashboard.from")} {thisMonthStartStr}
           </p>
+        </div>
+        <div className="rounded-2xl border border-slate-800/80 bg-slate-950/70 p-4 backdrop-blur">
+          <p className="text-xs uppercase text-slate-400">
+            {t(locale, "dashboard.thisMonthIncome")}
+          </p>
+          <p className="mt-2 text-2xl font-semibold text-emerald-300">
+            {formatCurrency(thisMonthIncomeTotal, "DOP", locale)}
+          </p>
+          <p className="text-xs text-slate-500">
+            {t(locale, "dashboard.from")} {thisMonthStartStr}
+          </p>
+        </div>
+        <div className="rounded-2xl border border-slate-800/80 bg-slate-950/70 p-4 backdrop-blur">
+          <p className="text-xs uppercase text-slate-400">
+            {t(locale, "dashboard.netThisMonth")}
+          </p>
+          <p
+            className={`mt-2 text-2xl font-semibold ${
+              thisMonthNet >= 0 ? "text-emerald-300" : "text-rose-300"
+            }`}
+          >
+            {formatCurrency(thisMonthNet, "DOP", locale)}
+          </p>
+          <p className="text-xs text-slate-500">{t(locale, "dashboard.netNote")}</p>
         </div>
         <div className="rounded-2xl border border-slate-800/80 bg-slate-950/70 p-4 backdrop-blur">
           <p className="text-xs uppercase text-slate-400">{t(locale, "dashboard.lastMonth")}</p>

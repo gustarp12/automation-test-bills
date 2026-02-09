@@ -44,6 +44,8 @@ export default async function IncomesPage() {
     .order("income_date", { ascending: false })
     .limit(50);
 
+  const exportHref = `/api/incomes/export?locale=${locale}`;
+
   return (
     <div className="space-y-8">
       <div className="space-y-2">
@@ -57,9 +59,17 @@ export default async function IncomesPage() {
       <IncomeForm currencies={activeCurrencies} locale={locale} />
 
       <section className="space-y-4">
-        <div>
-          <h2 className="text-lg font-semibold">{t(locale, "income.recent")}</h2>
-          <p className="text-xs text-slate-500">{t(locale, "income.recentNote")}</p>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold">{t(locale, "income.recent")}</h2>
+            <p className="text-xs text-slate-500">{t(locale, "income.recentNote")}</p>
+          </div>
+          <a
+            href={exportHref}
+            className="rounded-full border border-slate-700 px-4 py-2 text-xs font-semibold text-slate-200 transition hover:border-slate-500"
+          >
+            {t(locale, "common.exportCsv")}
+          </a>
         </div>
         <div className="overflow-hidden rounded-2xl border border-slate-800/80">
           <div className="grid grid-cols-12 gap-2 border-b border-slate-800 bg-slate-950/70 px-4 py-3 text-xs uppercase text-slate-400">

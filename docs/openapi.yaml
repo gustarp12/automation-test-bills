@@ -1,0 +1,119 @@
+openapi: 3.0.3
+info:
+  title: Expense Tracker API
+  version: 0.1.0
+servers:
+  - url: https://automation-test-bills.vercel.app
+paths:
+  /api/expenses/export:
+    get:
+      summary: Export expenses as CSV
+      parameters:
+        - in: query
+          name: from
+          schema:
+            type: string
+          description: YYYY-MM-DD
+        - in: query
+          name: to
+          schema:
+            type: string
+          description: YYYY-MM-DD
+        - in: query
+          name: category
+          schema:
+            type: string
+        - in: query
+          name: merchant
+          schema:
+            type: string
+        - in: query
+          name: currency
+          schema:
+            type: string
+        - in: query
+          name: locale
+          schema:
+            type: string
+            enum: [en, es]
+      responses:
+        "200":
+          description: CSV file
+          content:
+            text/csv:
+              schema:
+                type: string
+        "401":
+          description: Unauthorized
+  /api/expenses/import:
+    post:
+      summary: Import expenses from CSV rows
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                locale:
+                  type: string
+                  enum: [en, es]
+                rows:
+                  type: array
+                  items:
+                    type: object
+              required:
+                - rows
+      responses:
+        "200":
+          description: Import summary
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  inserted:
+                    type: integer
+                  skipped:
+                    type: integer
+                  errors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        row:
+                          type: integer
+                        message:
+                          type: string
+        "400":
+          description: Invalid request
+        "401":
+          description: Unauthorized
+  /api/incomes/export:
+    get:
+      summary: Export incomes as CSV
+      parameters:
+        - in: query
+          name: from
+          schema:
+            type: string
+          description: YYYY-MM-DD
+        - in: query
+          name: to
+          schema:
+            type: string
+          description: YYYY-MM-DD
+        - in: query
+          name: locale
+          schema:
+            type: string
+            enum: [en, es]
+      responses:
+        "200":
+          description: CSV file
+          content:
+            text/csv:
+              schema:
+                type: string
+        "401":
+          description: Unauthorized
