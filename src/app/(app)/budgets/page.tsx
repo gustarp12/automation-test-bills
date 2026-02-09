@@ -77,7 +77,7 @@ export default async function BudgetsPage({
         monthDefault={monthParam}
       />
 
-      <section className="space-y-4 rounded-2xl border border-slate-800 bg-slate-900/40 p-4">
+      <section className="space-y-4 rounded-2xl border border-slate-800/80 bg-slate-950/70 p-4 backdrop-blur">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <h2 className="text-lg font-semibold">{t(locale, "budgets.listTitle")}</h2>

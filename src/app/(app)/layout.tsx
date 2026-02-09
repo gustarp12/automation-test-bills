@@ -23,8 +23,10 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <LocaleProvider locale={locale}>
-      <div className="min-h-screen bg-slate-950 text-slate-100">
-        <header className="border-b border-slate-900/80">
+      <div className="relative min-h-screen overflow-hidden bg-slate-950 text-slate-100">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.12),_rgba(15,23,42,0.2),_rgba(2,6,23,0.9))]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_20%,_rgba(56,189,248,0.12),_transparent_55%)]" />
+        <header className="relative z-10 border-b border-slate-900/80 bg-slate-950/70 backdrop-blur">
           <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-6 py-4">
             <div className="flex items-center gap-6 text-sm">
               <Link href="/dashboard" className="font-semibold text-slate-100">
@@ -61,7 +63,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
             </div>
           </div>
         </header>
-        <main className="mx-auto max-w-6xl px-6 py-8">{children}</main>
+        <main className="relative z-10 mx-auto max-w-6xl px-6 py-8">{children}</main>
       </div>
     </LocaleProvider>
   );

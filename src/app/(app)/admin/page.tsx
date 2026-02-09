@@ -49,7 +49,7 @@ export default async function AdminPage() {
         <p className="text-sm text-slate-400">{t(locale, "admin.subtitle")}</p>
       </div>
 
-      <section className="space-y-3 rounded-2xl border border-slate-800 bg-slate-900/40 p-4">
+      <section className="space-y-3 rounded-2xl border border-slate-800/80 bg-slate-950/70 p-4 backdrop-blur">
         <div className="grid grid-cols-12 gap-2 text-xs uppercase text-slate-400">
           <span className="col-span-5">{t(locale, "admin.user")}</span>
           <span className="col-span-3">{t(locale, "admin.created")}</span>

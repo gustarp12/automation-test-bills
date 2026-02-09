@@ -83,7 +83,7 @@ export default function CsvImport({
   }
 
   return (
-    <section className="space-y-3 rounded-2xl border border-slate-800 bg-slate-900/40 p-5">
+    <section className="space-y-3 rounded-2xl border border-slate-800/80 bg-slate-950/70 p-5 backdrop-blur">
       <div>
         <h2 className="text-lg font-semibold">{t(locale, "imports.title")}</h2>
         <p className="text-xs text-slate-500">{t(locale, "imports.subtitle")}</p>

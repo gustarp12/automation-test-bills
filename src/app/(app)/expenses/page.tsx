@@ -40,7 +40,10 @@ type SearchParams = {
   category?: string;
   merchant?: string;
   currency?: string;
+  page?: string;
 };
+
+const PAGE_SIZE = 25;
 
 export default async function ExpensesPage({
   searchParams,
@@ -103,9 +106,14 @@ export default async function ExpensesPage({
     expensesQuery = expensesQuery.eq("currency", filters.currency.toUpperCase());
   }
 
-  const { data: expensesRaw } = await expensesQuery;
+  const page = Math.max(1, Number(filters.page ?? "1") || 1);
+  const offset = (page - 1) * PAGE_SIZE;
 
-  const expenses: ExpenseRowData[] = (expensesRaw ?? []).map((row) => {
+  const { data: expensesRaw } = await expensesQuery.range(offset, offset + PAGE_SIZE);
+  const hasNext = (expensesRaw ?? []).length > PAGE_SIZE;
+  const pageRows = (expensesRaw ?? []).slice(0, PAGE_SIZE);
+
+  const expenses: ExpenseRowData[] = pageRows.map((row) => {
     const merchantsValue = row.merchants as { name?: string } | { name?: string }[] | null;
     const categoriesValue = row.categories as { name?: string } | { name?: string }[] | null;
 
@@ -135,6 +143,24 @@ export default async function ExpensesPage({
   const exportHref = exportParams.toString()
     ? `/api/expenses/export?${exportParams.toString()}`
     : "/api/expenses/export";
+
+  const pageParams = new URLSearchParams();
+  if (filters.from) pageParams.set("from", filters.from);
+  if (filters.to) pageParams.set("to", filters.to);
+  if (filters.category) pageParams.set("category", filters.category);
+  if (filters.merchant) pageParams.set("merchant", filters.merchant);
+  if (filters.currency) pageParams.set("currency", filters.currency);
+
+  const buildPageHref = (targetPage: number) => {
+    const params = new URLSearchParams(pageParams);
+    if (targetPage > 1) {
+      params.set("page", String(targetPage));
+    } else {
+      params.delete("page");
+    }
+    const qs = params.toString();
+    return qs ? `/expenses?${qs}` : "/expenses";
+  };
 
   return (
     <div className="space-y-8">
@@ -176,7 +202,7 @@ export default async function ExpensesPage({
           </div>
         </div>
 
-        <form className="grid gap-3 rounded-2xl border border-slate-800 bg-slate-900/40 p-4 md:grid-cols-5">
+        <form className="grid gap-3 rounded-2xl border border-slate-800/80 bg-slate-950/70 p-4 backdrop-blur md:grid-cols-5">
           <label className="text-xs text-slate-300">
             {t(locale, "common.from")}
             <input
@@ -257,7 +283,7 @@ export default async function ExpensesPage({
         </form>
 
         <div className="overflow-hidden rounded-2xl border border-slate-800">
-          <div className="grid grid-cols-12 gap-2 border-b border-slate-800 bg-slate-900/60 px-4 py-3 text-xs uppercase text-slate-400">
+          <div className="grid grid-cols-12 gap-2 border-b border-slate-800 bg-slate-950/70 px-4 py-3 text-xs uppercase text-slate-400">
             <span className="col-span-3">{t(locale, "common.merchant")}</span>
             <span className="col-span-2">{t(locale, "common.category")}</span>
             <span className="col-span-2">{t(locale, "common.date")}</span>
@@ -265,7 +291,7 @@ export default async function ExpensesPage({
             <span className="col-span-2">{t(locale, "expenses.dopTotal")}</span>
             <span className="col-span-1">{t(locale, "common.notes")}</span>
           </div>
-          <div className="divide-y divide-slate-900/60">
+        <div className="divide-y divide-slate-900/60">
             {expenses.length === 0 ? (
               <div className="px-4 py-6 text-sm text-slate-400">
                 {t(locale, "common.noExpenses")}
@@ -282,6 +308,34 @@ export default async function ExpensesPage({
                 />
               ))
             )}
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-800/80 bg-slate-950/60 px-4 py-3 text-xs text-slate-400 backdrop-blur">
+          <span>
+            {t(locale, "common.page")} {page}
+          </span>
+          <div className="flex items-center gap-2">
+            <Link
+              href={buildPageHref(page - 1)}
+              className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${
+                page <= 1
+                  ? "border-slate-800 text-slate-600"
+                  : "border-slate-700 text-slate-200 hover:border-slate-500"
+              }`}
+            >
+              {t(locale, "common.previous")}
+            </Link>
+            <Link
+              href={hasNext ? buildPageHref(page + 1) : buildPageHref(page)}
+              className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${
+                hasNext
+                  ? "border-slate-700 text-slate-200 hover:border-slate-500"
+                  : "border-slate-800 text-slate-600"
+              }`}
+            >
+              {t(locale, "common.next")}
+            </Link>
           </div>
         </div>
       </section>

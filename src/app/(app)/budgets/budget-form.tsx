@@ -53,7 +53,7 @@ export default function BudgetForm({ categories, locale, monthDefault }: BudgetF
     <form
       ref={formRef}
       action={formAction}
-      className="flex flex-wrap items-end gap-3 rounded-2xl border border-slate-800 bg-slate-900/40 p-4"
+      className="flex flex-wrap items-end gap-3 rounded-2xl border border-slate-800/80 bg-slate-950/70 p-4 backdrop-blur"
     >
       <input type="hidden" name="locale" value={locale} />
       <label className="text-sm">

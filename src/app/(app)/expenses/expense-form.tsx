@@ -110,7 +110,7 @@ export default function ExpenseForm({
   return (
     <form
       action={formAction}
-      className="space-y-4 rounded-2xl border border-slate-800 bg-slate-900/40 p-5"
+      className="space-y-4 rounded-2xl border border-slate-800/80 bg-slate-950/70 p-5 backdrop-blur"
     >
       <input type="hidden" name="amount" value={amountRaw} />
       <input type="hidden" name="locale" value={locale} />

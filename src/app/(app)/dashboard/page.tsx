@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { redirect } from "next/navigation";
 
 import CategoryDonut from "./category-donut";
@@ -11,6 +12,46 @@ type ExpenseRow = {
   categoryName: string | null;
   merchantName: string | null;
 };
+
+const fetchExpensesInRange = cache(
+  async (
+    supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+    start: string,
+    end: string
+  ) => {
+    const { data } = await supabase
+      .from("expenses")
+      .select("amount_dop, categories(name), merchants(name), expense_date")
+      .gte("expense_date", start)
+      .lte("expense_date", end);
+    return data ?? [];
+  }
+);
+
+const fetchExpensesAmountOnly = cache(
+  async (
+    supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+    start: string,
+    end: string
+  ) => {
+    const { data } = await supabase
+      .from("expenses")
+      .select("amount_dop")
+      .gte("expense_date", start)
+      .lte("expense_date", end);
+    return data ?? [];
+  }
+);
+
+const fetchBudgetsForMonth = cache(
+  async (supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>, month: string) => {
+    const { data } = await supabase
+      .from("budgets")
+      .select("amount, categories(name)")
+      .eq("month", month);
+    return data ?? [];
+  }
+);
 
 export default async function DashboardPage() {
   const supabase = await createSupabaseServerClient();
@@ -34,17 +75,12 @@ export default async function DashboardPage() {
   const lastMonthEndStr = lastMonthEnd.toISOString().slice(0, 10);
   const todayStr = now.toISOString().slice(0, 10);
 
-  const { data: thisMonthRaw } = await supabase
-    .from("expenses")
-    .select("amount_dop, categories(name), merchants(name)")
-    .gte("expense_date", thisMonthStartStr)
-    .lte("expense_date", todayStr);
-
-  const { data: lastMonthExpenses } = await supabase
-    .from("expenses")
-    .select("amount_dop")
-    .gte("expense_date", lastMonthStartStr)
-    .lte("expense_date", lastMonthEndStr);
+  const thisMonthRaw = await fetchExpensesInRange(supabase, thisMonthStartStr, todayStr);
+  const lastMonthExpenses = await fetchExpensesAmountOnly(
+    supabase,
+    lastMonthStartStr,
+    lastMonthEndStr
+  );
 
   const thisMonthExpenses: ExpenseRow[] = (thisMonthRaw ?? []).map((row) => {
     const categoriesValue = row.categories as { name?: string } | { name?: string }[] | null;
@@ -119,11 +155,7 @@ export default async function DashboardPage() {
   const trendStart = new Date(now.getFullYear(), now.getMonth() - 5, 1);
   const trendStartStr = trendStart.toISOString().slice(0, 10);
 
-  const { data: trendExpenses } = await supabase
-    .from("expenses")
-    .select("amount_dop, expense_date")
-    .gte("expense_date", trendStartStr)
-    .lte("expense_date", todayStr);
+  const trendExpenses = await fetchExpensesInRange(supabase, trendStartStr, todayStr);
 
   const trendMap = new Map<string, number>();
   (trendExpenses ?? []).forEach((row) => {
@@ -146,10 +178,7 @@ export default async function DashboardPage() {
 
   const maxTrendTotal = Math.max(1, ...trendMonths.map((item) => item.total));
 
-  const { data: budgetsRaw } = await supabase
-    .from("budgets")
-    .select("amount, categories(name)")
-    .eq("month", thisMonthStartStr);
+  const budgetsRaw = await fetchBudgetsForMonth(supabase, thisMonthStartStr);
 
   const budgets = (budgetsRaw ?? []).map((row) => {
     const categoriesValue = row.categories as { name?: string } | { name?: string }[] | null;
@@ -176,7 +205,7 @@ export default async function DashboardPage() {
         <p className="text-sm text-slate-400">{t(locale, "dashboard.subtitle")}</p>
       </div>
       <div className="grid gap-4 md:grid-cols-4">
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-4">
+        <div className="rounded-2xl border border-slate-800/80 bg-slate-950/70 p-4 backdrop-blur">
           <p className="text-xs uppercase text-slate-400">{t(locale, "dashboard.thisMonth")}</p>
           <p className="mt-2 text-2xl font-semibold">
             {formatCurrency(thisMonthTotal, "DOP", locale)}
@@ -185,7 +214,7 @@ export default async function DashboardPage() {
             {t(locale, "dashboard.from")} {thisMonthStartStr}
           </p>
         </div>
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-4">
+        <div className="rounded-2xl border border-slate-800/80 bg-slate-950/70 p-4 backdrop-blur">
           <p className="text-xs uppercase text-slate-400">{t(locale, "dashboard.lastMonth")}</p>
           <p className="mt-2 text-2xl font-semibold">
             {formatCurrency(lastMonthTotal, "DOP", locale)}
@@ -194,7 +223,7 @@ export default async function DashboardPage() {
             {t(locale, "dashboard.upTo")} {lastMonthEndStr}
           </p>
         </div>
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-4">
+        <div className="rounded-2xl border border-slate-800/80 bg-slate-950/70 p-4 backdrop-blur">
           <p className="text-xs uppercase text-slate-400">{t(locale, "dashboard.topCategory")}</p>
           <p className="mt-2 text-2xl font-semibold">{topCategory?.[0] ?? "—"}</p>
           <p className="text-xs text-slate-500">
@@ -203,7 +232,7 @@ export default async function DashboardPage() {
               : t(locale, "dashboard.awaiting")}
           </p>
         </div>
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-4">
+        <div className="rounded-2xl border border-slate-800/80 bg-slate-950/70 p-4 backdrop-blur">
           <p className="text-xs uppercase text-slate-400">{t(locale, "dashboard.budgetUsed")}</p>
           <p className="mt-2 text-2xl font-semibold">
             {budgetPercent !== null ? `${budgetPercent}%` : "—"}
@@ -227,7 +256,7 @@ export default async function DashboardPage() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
-        <section className="rounded-2xl border border-slate-800 bg-slate-900/40 p-4 lg:col-span-2">
+        <section className="rounded-2xl border border-slate-800/80 bg-slate-950/70 p-4 backdrop-blur lg:col-span-2">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold">{t(locale, "dashboard.trendTitle")}</h2>
             <span className="text-xs text-slate-500">
@@ -252,7 +281,7 @@ export default async function DashboardPage() {
           </div>
         </section>
 
-        <section className="space-y-4 rounded-2xl border border-slate-800 bg-slate-900/40 p-4">
+        <section className="space-y-4 rounded-2xl border border-slate-800/80 bg-slate-950/70 p-4 backdrop-blur">
           <div>
             <h2 className="text-sm font-semibold">{t(locale, "dashboard.topMerchants")}</h2>
             <p className="text-xs text-slate-500">{t(locale, "dashboard.topMerchantsNote")}</p>
