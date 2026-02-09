@@ -94,6 +94,8 @@ const messages: Record<Locale, Record<string, string>> = {
     "expenses.updated": "Expense updated.",
     "expenses.updateFailed": "Unable to update expense.",
     "expenses.deleteConfirm": "Delete this expense?",
+    "expenses.noCategories":
+      "No categories available yet. Ask an admin to add one.",
 
     "categories.title": "Organize your categories",
     "categories.subtitle": "Keep them lean and reusable across expenses.",
@@ -227,6 +229,8 @@ const messages: Record<Locale, Record<string, string>> = {
     "expenses.updated": "Gasto actualizado.",
     "expenses.updateFailed": "No se pudo actualizar el gasto.",
     "expenses.deleteConfirm": "¿Eliminar este gasto?",
+    "expenses.noCategories":
+      "Aún no hay categorías disponibles. Pide al admin que agregue una.",
 
     "categories.title": "Organiza tus categorías",
     "categories.subtitle": "Mantenlas simples y reutilizables.",

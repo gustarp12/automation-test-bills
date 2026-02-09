@@ -28,13 +28,14 @@ type ExpenseFormProps = {
   locale: Locale;
 };
 
-function SubmitButton({ label }: { label: string }) {
+function SubmitButton({ label, disabled }: { label: string; disabled?: boolean }) {
   const { pending } = useFormStatus();
+  const isDisabled = pending || Boolean(disabled);
 
   return (
     <button
       type="submit"
-      disabled={pending}
+      disabled={isDisabled}
       className="rounded-xl bg-emerald-400 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-70"
     >
       {pending ? `${label}...` : label}
@@ -104,6 +105,7 @@ export default function ExpenseForm({
     currencies.length > 0
       ? currencies
       : [{ code: "DOP", name: "Dominican Peso", symbol: "RD$" }];
+  const hasCategories = categories.length > 0;
 
   return (
     <form
@@ -198,6 +200,7 @@ export default function ExpenseForm({
             className="mt-2 w-full rounded-xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-sm text-slate-100 outline-none focus:border-emerald-400"
             defaultValue=""
             required
+            disabled={!hasCategories}
           >
             <option value=""></option>
             {categories.map((category) => (
@@ -206,6 +209,11 @@ export default function ExpenseForm({
               </option>
             ))}
           </select>
+          {!hasCategories ? (
+            <p className="mt-2 text-xs text-amber-300">
+              {t(locale, "expenses.noCategories")}
+            </p>
+          ) : null}
         </label>
 
         <label className="text-sm">
@@ -252,7 +260,7 @@ export default function ExpenseForm({
         <p className="text-sm text-slate-300">{state.message}</p>
       ) : null}
 
-      <SubmitButton label={t(locale, "common.addExpense")} />
+      <SubmitButton label={t(locale, "common.addExpense")} disabled={!hasCategories} />
     </form>
   );
 }
