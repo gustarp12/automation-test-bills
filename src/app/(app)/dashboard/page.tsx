@@ -249,15 +249,18 @@ export default async function DashboardPage() {
 
   const renderOverlayTrend = () => {
     const maxOverlay = Math.max(1, maxExpenseTrendTotal, maxIncomeTrendTotal);
-    const lineHeight = 100;
-    const step = 100 / Math.max(1, trendMonths.length - 1);
+    const chartHeight = 88;
+    const lineHeight = chartHeight;
+    const xPadding = 6;
+    const step = (100 - xPadding * 2) / Math.max(1, trendMonths.length - 1);
     const netPoints = netTrendMonths
       .map((month, index) => {
         const normalized = maxNetMagnitude
           ? (month.total + maxNetMagnitude) / (maxNetMagnitude * 2)
           : 0.5;
         const y = Math.max(0, Math.min(lineHeight, lineHeight - normalized * lineHeight));
-        return `${index * step},${y}`;
+        const x = xPadding + index * step;
+        return `${x},${y}`;
       })
       .join(" ");
 
@@ -275,8 +278,8 @@ export default async function DashboardPage() {
           <span className="text-xs text-slate-500">{t(locale, "dashboard.trendSubtitle")}</span>
         </div>
 
-        <div className="relative h-28">
-          <div className="grid h-full grid-cols-6 items-end gap-3">
+        <div className="relative">
+          <div className="grid grid-cols-6 gap-3">
             {trendMonths.map((month, index) => {
               const incomeValue = incomeTrendMonths[index]?.total ?? 0;
               const expenseValue = month.total ?? 0;
@@ -284,16 +287,16 @@ export default async function DashboardPage() {
               const expenseHeight = Math.max(6, Math.round((expenseValue / maxOverlay) * 100));
 
               return (
-                <div key={month.key} className="flex h-full flex-col items-center gap-2">
-                  <div className="flex h-full w-full items-end gap-1">
-                    <div className="flex h-full flex-1 items-end">
+                <div key={month.key} className="flex flex-col items-center gap-2">
+                  <div className="flex w-full items-end gap-1" style={{ height: chartHeight }}>
+                    <div className="flex flex-1 items-end">
                       <div
                         className="w-full rounded-full bg-emerald-400/80"
                         style={{ height: `${incomeHeight}%` }}
                         title={formatCurrency(incomeValue, "DOP", locale)}
                       />
                     </div>
-                    <div className="flex h-full flex-1 items-end">
+                    <div className="flex flex-1 items-end">
                       <div
                         className="w-full rounded-full bg-sky-400/70"
                         style={{ height: `${expenseHeight}%` }}
@@ -307,7 +310,8 @@ export default async function DashboardPage() {
             })}
           </div>
           <svg
-            className="pointer-events-none absolute inset-0"
+            className="pointer-events-none absolute inset-x-0 top-0"
+            style={{ height: chartHeight }}
             viewBox={`0 0 100 ${lineHeight}`}
             preserveAspectRatio="none"
           >
@@ -324,6 +328,8 @@ export default async function DashboardPage() {
               fill="none"
               stroke="rgba(251,191,36,0.9)"
               strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
             />
           </svg>
         </div>

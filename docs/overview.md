@@ -4,7 +4,7 @@
 - Frontend: Next.js App Router (React 19, TypeScript, Tailwind CSS)
 - Backend: Supabase (Postgres + Auth + RLS)
 - Hosting: Vercel (Prod + Preview)
-- Storage: Supabase Postgres for expenses, incomes, budgets, categories, merchants, currencies
+- Storage: Supabase Postgres for expenses, incomes, budgets, categories, purposes, merchants, currencies
 
 ### Data Flow
 1. User signs in via Supabase Auth (email/password).
@@ -38,6 +38,7 @@ flowchart LR
 - `amount_dop` (numeric)
 - `expense_date` (date)
 - `category_id` (uuid, fk categories)
+- `purpose_id` (uuid, fk purposes)
 - `merchant_id` (uuid, fk merchants)
 - `notes` (text)
 
@@ -53,6 +54,12 @@ flowchart LR
 - `notes` (text)
 
 ### categories
+- `id` (uuid, pk)
+- `user_id` (uuid, fk profiles, nullable)
+- `name` (text)
+- `is_system` (boolean)
+
+### purposes
 - `id` (uuid, pk)
 - `user_id` (uuid, fk profiles, nullable)
 - `name` (text)
@@ -104,7 +111,7 @@ flowchart LR
 6. **Admin (admins only)**
    - Manage user roles (admin/user)
 7. **Catalogs (admins only)**
-   - Categories, merchants, currencies
+   - Categories, purposes, merchants, currencies
 
 ## API Summary
 - `GET /api/expenses/export`

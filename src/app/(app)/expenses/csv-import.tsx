@@ -18,6 +18,7 @@ type CurrencyOption = {
 
 type CsvImportProps = {
   categories: Option[];
+  purposes: Option[];
   merchants: Option[];
   currencies: CurrencyOption[];
   locale: Locale;
@@ -31,6 +32,7 @@ type ImportResult = {
 
 export default function CsvImport({
   categories,
+  purposes,
   merchants,
   currencies,
   locale,
@@ -93,7 +95,9 @@ export default function CsvImport({
         <p>{t(locale, "imports.instructions")}</p>
         <p className="text-slate-500">
           {t(locale, "imports.headers")}{" "}
-          <span className="text-slate-300">date, amount, currency, category</span>{" "}
+          <span className="text-slate-300">
+            date, amount, currency, category, purpose
+          </span>{" "}
           {t(locale, "imports.headersOptional")}{" "}
           <span className="text-slate-300">merchant, notes, fx_rate_to_dop</span>
         </p>
@@ -107,6 +111,7 @@ export default function CsvImport({
           {t(locale, "imports.available")}
           <span className="text-slate-300">
             {categories.length} {t(locale, "common.category")},{" "}
+            {purposes.length} {t(locale, "common.purpose")},{" "}
             {merchants.length} {t(locale, "common.merchant")},{" "}
             {currencies.length} {t(locale, "common.currency")}
           </span>

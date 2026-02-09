@@ -53,6 +53,7 @@ export async function POST(request: Request) {
   const { data: categories } = await supabase
     .from("categories")
     .select("id, name");
+  const { data: purposes } = await supabase.from("purposes").select("id, name");
   const { data: merchants } = await supabase.from("merchants").select("id, name");
   const { data: currencies } = await supabase
     .from("currencies")
@@ -62,6 +63,10 @@ export async function POST(request: Request) {
     (categories ?? []).map((cat) => [cat.name.toLowerCase(), cat.id])
   );
   const categoryIdMap = new Map((categories ?? []).map((cat) => [cat.id, cat.id]));
+  const purposeMap = new Map(
+    (purposes ?? []).map((purpose) => [purpose.name.toLowerCase(), purpose.id])
+  );
+  const purposeIdMap = new Map((purposes ?? []).map((purpose) => [purpose.id, purpose.id]));
   const merchantMap = new Map(
     (merchants ?? []).map((m) => [m.name.toLowerCase(), m.id])
   );
@@ -80,6 +85,7 @@ export async function POST(request: Request) {
     expense_date: string;
     notes: string | null;
     category_id: string;
+    purpose_id: string;
     merchant_id: string | null;
   }[] = [];
 
@@ -95,6 +101,7 @@ export async function POST(request: Request) {
     const amountRaw = normalized.amount || "";
     const currencyRaw = (normalized.currency || "DOP").toUpperCase();
     const categoryRaw = normalized.category || normalized.category_name || "";
+    const purposeRaw = normalized.purpose || normalized.purpose_name || "";
     const merchantRaw = normalized.merchant || normalized.merchant_name || "";
     const notesRaw = normalized.notes || "";
     const fxRateRaw =
@@ -128,6 +135,11 @@ export async function POST(request: Request) {
       return;
     }
 
+    if (!purposeRaw) {
+      errors.push({ row: index + 2, message: t(locale, "expenses.purposeRequired") });
+      return;
+    }
+
     const categoryId =
       categoryIdMap.get(categoryRaw) ??
       categoryMap.get(categoryRaw.toLowerCase()) ??
@@ -136,6 +148,17 @@ export async function POST(request: Request) {
 
     if (!categoryId) {
       errors.push({ row: index + 2, message: t(locale, "imports.categoryMissing") });
+      return;
+    }
+
+    const purposeId =
+      purposeIdMap.get(purposeRaw) ??
+      purposeMap.get(purposeRaw.toLowerCase()) ??
+      purposeMap.get(purposeRaw) ??
+      null;
+
+    if (!purposeId) {
+      errors.push({ row: index + 2, message: t(locale, "imports.purposeMissing") });
       return;
     }
 
@@ -175,6 +198,7 @@ export async function POST(request: Request) {
       expense_date: expenseDate,
       notes: notesRaw || null,
       category_id: categoryId,
+      purpose_id: purposeId,
       merchant_id: merchantId,
     });
   });

@@ -29,15 +29,18 @@ type ExpenseRowData = {
   notes: string | null;
   fx_rate_to_dop: string | null;
   category_id: string | null;
+  purpose_id: string | null;
   merchant_id: string | null;
   merchants?: { name?: string } | null;
   categories?: { name?: string } | null;
+  purposes?: { name?: string } | null;
 };
 
 type SearchParams = {
   from?: string;
   to?: string;
   category?: string;
+  purpose?: string;
   merchant?: string;
   currency?: string;
   page?: string;
@@ -70,6 +73,12 @@ export default async function ExpensesPage({
     .order("is_system", { ascending: false })
     .order("name", { ascending: true });
 
+  const { data: purposes } = await supabase
+    .from("purposes")
+    .select("id, name")
+    .order("is_system", { ascending: false })
+    .order("name", { ascending: true });
+
   const { data: merchants } = await supabase
     .from("merchants")
     .select("id, name")
@@ -87,7 +96,7 @@ export default async function ExpensesPage({
   let expensesQuery = supabase
     .from("expenses")
     .select(
-      "id, amount, currency, amount_dop, expense_date, notes, fx_rate_to_dop, category_id, merchant_id, merchants(name), categories(name)"
+      "id, amount, currency, amount_dop, expense_date, notes, fx_rate_to_dop, category_id, purpose_id, merchant_id, merchants(name), categories(name), purposes(name)"
     )
     .order("expense_date", { ascending: false })
     .limit(50);
@@ -100,6 +109,9 @@ export default async function ExpensesPage({
   }
   if (filters.category) {
     expensesQuery = expensesQuery.eq("category_id", filters.category);
+  }
+  if (filters.purpose) {
+    expensesQuery = expensesQuery.eq("purpose_id", filters.purpose);
   }
   if (filters.merchant) {
     expensesQuery = expensesQuery.eq("merchant_id", filters.merchant);
@@ -124,6 +136,7 @@ export default async function ExpensesPage({
   const expenses: ExpenseRowData[] = pageRows.map((row) => {
     const merchantsValue = row.merchants as { name?: string } | { name?: string }[] | null;
     const categoriesValue = row.categories as { name?: string } | { name?: string }[] | null;
+    const purposesValue = row.purposes as { name?: string } | { name?: string }[] | null;
 
     return {
       id: row.id,
@@ -134,9 +147,11 @@ export default async function ExpensesPage({
       notes: row.notes ?? null,
       fx_rate_to_dop: row.fx_rate_to_dop ?? null,
       category_id: row.category_id ?? null,
+      purpose_id: row.purpose_id ?? null,
       merchant_id: row.merchant_id ?? null,
       merchants: Array.isArray(merchantsValue) ? merchantsValue[0] ?? null : merchantsValue ?? null,
       categories: Array.isArray(categoriesValue) ? categoriesValue[0] ?? null : categoriesValue ?? null,
+      purposes: Array.isArray(purposesValue) ? purposesValue[0] ?? null : purposesValue ?? null,
     };
   });
 
@@ -144,6 +159,7 @@ export default async function ExpensesPage({
   if (filters.from) exportParams.set("from", filters.from);
   if (filters.to) exportParams.set("to", filters.to);
   if (filters.category) exportParams.set("category", filters.category);
+  if (filters.purpose) exportParams.set("purpose", filters.purpose);
   if (filters.merchant) exportParams.set("merchant", filters.merchant);
   if (filters.currency) exportParams.set("currency", filters.currency);
   exportParams.set("locale", locale);
@@ -156,6 +172,7 @@ export default async function ExpensesPage({
   if (filters.from) pageParams.set("from", filters.from);
   if (filters.to) pageParams.set("to", filters.to);
   if (filters.category) pageParams.set("category", filters.category);
+  if (filters.purpose) pageParams.set("purpose", filters.purpose);
   if (filters.merchant) pageParams.set("merchant", filters.merchant);
   if (filters.currency) pageParams.set("currency", filters.currency);
   if (pageSize !== DEFAULT_PAGE_SIZE) pageParams.set("pageSize", String(pageSize));
@@ -183,6 +200,7 @@ export default async function ExpensesPage({
 
       <ExpenseForm
         categories={(categories ?? []) as Option[]}
+        purposes={(purposes ?? []) as Option[]}
         merchants={(merchants ?? []) as Option[]}
         currencies={(activeCurrencies ?? []) as CurrencyOption[]}
         locale={locale}
@@ -190,6 +208,7 @@ export default async function ExpensesPage({
 
       <CsvImport
         categories={(categories ?? []) as Option[]}
+        purposes={(purposes ?? []) as Option[]}
         merchants={(merchants ?? []) as Option[]}
         currencies={(activeCurrencies ?? []) as CurrencyOption[]}
         locale={locale}
@@ -211,7 +230,7 @@ export default async function ExpensesPage({
           </div>
         </div>
 
-        <form className="grid gap-3 rounded-2xl border border-slate-800/80 bg-slate-950/70 p-4 backdrop-blur md:grid-cols-6">
+        <form className="grid gap-3 rounded-2xl border border-slate-800/80 bg-slate-950/70 p-4 backdrop-blur md:grid-cols-7">
           <label className="text-xs text-slate-300">
             {t(locale, "common.from")}
             <input
@@ -241,6 +260,21 @@ export default async function ExpensesPage({
               {(categories ?? []).map((category) => (
                 <option key={category.id} value={category.id}>
                   {category.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="text-xs text-slate-300">
+            {t(locale, "common.purpose")}
+            <select
+              name="purpose"
+              defaultValue={filters.purpose ?? ""}
+              className="mt-1 w-full rounded-lg border border-slate-800 bg-slate-950/80 px-3 py-2 text-xs text-slate-100 outline-none focus:border-emerald-400"
+            >
+              <option value=""></option>
+              {(purposes ?? []).map((purpose) => (
+                <option key={purpose.id} value={purpose.id}>
+                  {purpose.name}
                 </option>
               ))}
             </select>
@@ -308,13 +342,15 @@ export default async function ExpensesPage({
         <div className="overflow-hidden rounded-2xl border border-slate-800">
           <div className="grid grid-cols-12 gap-2 border-b border-slate-800 bg-slate-950/70 px-4 py-3 text-xs uppercase text-slate-400">
             <span className="col-span-3">{t(locale, "common.merchant")}</span>
-            <span className="col-span-2">{t(locale, "common.category")}</span>
+            <span className="col-span-2">
+              {t(locale, "common.category")} / {t(locale, "common.purpose")}
+            </span>
             <span className="col-span-2">{t(locale, "common.date")}</span>
             <span className="col-span-2">{t(locale, "common.amount")}</span>
             <span className="col-span-2">{t(locale, "expenses.dopTotal")}</span>
             <span className="col-span-1">{t(locale, "common.notes")}</span>
           </div>
-        <div className="divide-y divide-slate-900/60">
+          <div className="divide-y divide-slate-900/60">
             {expenses.length === 0 ? (
               <div className="px-4 py-6 text-sm text-slate-400">
                 {t(locale, "common.noExpenses")}
@@ -325,6 +361,7 @@ export default async function ExpensesPage({
                   key={expense.id}
                   expense={expense}
                   categories={(categories ?? []) as Option[]}
+                  purposes={(purposes ?? []) as Option[]}
                   merchants={(merchants ?? []) as Option[]}
                   currencies={(activeCurrencies ?? []) as CurrencyOption[]}
                   locale={locale}
@@ -370,6 +407,7 @@ export default async function ExpensesPage({
               <input type="hidden" name="from" value={filters.from ?? ""} />
               <input type="hidden" name="to" value={filters.to ?? ""} />
               <input type="hidden" name="category" value={filters.category ?? ""} />
+              <input type="hidden" name="purpose" value={filters.purpose ?? ""} />
               <input type="hidden" name="merchant" value={filters.merchant ?? ""} />
               <input type="hidden" name="currency" value={filters.currency ?? ""} />
               <input type="hidden" name="pageSize" value={String(pageSize)} />

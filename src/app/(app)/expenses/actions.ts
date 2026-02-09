@@ -37,6 +37,7 @@ export async function createExpense(
     .toUpperCase();
   const expenseDate = String(formData.get("expense_date") ?? "").trim();
   const categoryId = String(formData.get("category_id") ?? "").trim();
+  const purposeId = String(formData.get("purpose_id") ?? "").trim();
   const merchantId = String(formData.get("merchant_id") ?? "").trim();
   const notes = String(formData.get("notes") ?? "").trim();
   const fxRateRaw = String(formData.get("fx_rate_to_dop") ?? "").trim();
@@ -55,6 +56,10 @@ export async function createExpense(
 
   if (!categoryId) {
     return { message: t(locale, "expenses.categoryRequired") };
+  }
+
+  if (!purposeId) {
+    return { message: t(locale, "expenses.purposeRequired") };
   }
 
   if (!expenseDate) {
@@ -87,6 +92,7 @@ export async function createExpense(
     expense_date: expenseDate,
     notes: notes || null,
     category_id: categoryId,
+    purpose_id: purposeId,
     merchant_id: merchantId || null,
   });
 
@@ -121,6 +127,7 @@ export async function updateExpense(
     .toUpperCase();
   const expenseDate = String(formData.get("expense_date") ?? "").trim();
   const categoryId = String(formData.get("category_id") ?? "").trim();
+  const purposeId = String(formData.get("purpose_id") ?? "").trim();
   const merchantId = String(formData.get("merchant_id") ?? "").trim();
   const notes = String(formData.get("notes") ?? "").trim();
   const fxRateRaw = String(formData.get("fx_rate_to_dop") ?? "").trim();
@@ -143,6 +150,10 @@ export async function updateExpense(
 
   if (!categoryId) {
     return { message: t(locale, "expenses.categoryRequired") };
+  }
+
+  if (!purposeId) {
+    return { message: t(locale, "expenses.purposeRequired") };
   }
 
   if (!expenseDate) {
@@ -176,6 +187,7 @@ export async function updateExpense(
       expense_date: expenseDate,
       notes: notes || null,
       category_id: categoryId,
+      purpose_id: purposeId,
       merchant_id: merchantId || null,
     })
     .eq("id", id)

@@ -24,6 +24,10 @@ paths:
           schema:
             type: string
         - in: query
+          name: purpose
+          schema:
+            type: string
+        - in: query
           name: merchant
           schema:
             type: string

@@ -28,13 +28,16 @@ export async function GET(request: Request) {
   const from = searchParams.get("from");
   const to = searchParams.get("to");
   const category = searchParams.get("category");
+  const purpose = searchParams.get("purpose");
   const merchant = searchParams.get("merchant");
   const currency = searchParams.get("currency");
   const locale = normalizeLocale(searchParams.get("locale"));
 
   let query = supabase
     .from("expenses")
-    .select("expense_date, amount, currency, amount_dop, notes, categories(name), merchants(name)")
+    .select(
+      "expense_date, amount, currency, amount_dop, notes, categories(name), purposes(name), merchants(name)"
+    )
     .order("expense_date", { ascending: false });
 
   if (from) {
@@ -45,6 +48,9 @@ export async function GET(request: Request) {
   }
   if (category) {
     query = query.eq("category_id", category);
+  }
+  if (purpose) {
+    query = query.eq("purpose_id", purpose);
   }
   if (merchant) {
     query = query.eq("merchant_id", merchant);
@@ -61,6 +67,7 @@ export async function GET(request: Request) {
   const header = [
     t(locale, "common.merchant"),
     t(locale, "common.category"),
+    t(locale, "common.purpose"),
     t(locale, "common.date"),
     t(locale, "common.amount"),
     t(locale, "expenses.dopTotal"),
@@ -70,16 +77,21 @@ export async function GET(request: Request) {
   const rows = (data ?? []).map((row) => {
     const merchantsValue = row.merchants as { name?: string } | { name?: string }[] | null;
     const categoriesValue = row.categories as { name?: string } | { name?: string }[] | null;
+    const purposesValue = row.purposes as { name?: string } | { name?: string }[] | null;
     const merchantName = Array.isArray(merchantsValue)
       ? merchantsValue[0]?.name ?? ""
       : merchantsValue?.name ?? "";
     const categoryName = Array.isArray(categoriesValue)
       ? categoriesValue[0]?.name ?? ""
       : categoriesValue?.name ?? "";
+    const purposeName = Array.isArray(purposesValue)
+      ? purposesValue[0]?.name ?? ""
+      : purposesValue?.name ?? "";
 
     return [
       toCsvValue(merchantName),
       toCsvValue(categoryName),
+      toCsvValue(purposeName),
       toCsvValue(row.expense_date),
       toCsvValue(`${row.amount} ${row.currency}`),
       toCsvValue(row.amount_dop),

@@ -30,14 +30,17 @@ type ExpenseRowData = {
   notes: string | null;
   fx_rate_to_dop: string | null;
   category_id: string | null;
+  purpose_id: string | null;
   merchant_id: string | null;
   merchants?: { name?: string } | null;
   categories?: { name?: string } | null;
+  purposes?: { name?: string } | null;
 };
 
 type ExpenseRowProps = {
   expense: ExpenseRowData;
   categories: Option[];
+  purposes: Option[];
   merchants: Option[];
   currencies: CurrencyOption[];
   locale: Locale;
@@ -76,6 +79,7 @@ function countIntegerDigits(raw: string) {
 export default function ExpenseRow({
   expense,
   categories,
+  purposes,
   merchants,
   currencies,
   locale,
@@ -117,7 +121,10 @@ export default function ExpenseRow({
           {expense.merchants?.name ?? "—"}
         </span>
         <span className="col-span-2 text-slate-300">
-          {expense.categories?.name ?? "—"}
+          <span className="block">{expense.categories?.name ?? "—"}</span>
+          <span className="mt-1 block text-xs text-slate-500">
+            {expense.purposes?.name ?? "—"}
+          </span>
         </span>
         <span className="col-span-2 text-slate-400">
           {formatDate(expense.expense_date, locale)}
@@ -244,7 +251,7 @@ export default function ExpenseRow({
             </label>
           ) : null}
 
-          <div className="grid gap-3 md:grid-cols-2">
+          <div className="grid gap-3 md:grid-cols-3">
             <label className="text-xs text-slate-300">
               {t(locale, "common.category")}
               <select
@@ -257,6 +264,23 @@ export default function ExpenseRow({
                 {categories.map((category) => (
                   <option key={category.id} value={category.id}>
                     {category.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="text-xs text-slate-300">
+              {t(locale, "common.purpose")}
+              <select
+                name="purpose_id"
+                defaultValue={expense.purpose_id ?? ""}
+                required
+                className="mt-1 w-full rounded-lg border border-slate-800 bg-slate-950/80 px-3 py-2 text-xs text-slate-100 outline-none focus:border-emerald-400"
+              >
+                <option value=""></option>
+                {purposes.map((purpose) => (
+                  <option key={purpose.id} value={purpose.id}>
+                    {purpose.name}
                   </option>
                 ))}
               </select>

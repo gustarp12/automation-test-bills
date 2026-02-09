@@ -29,6 +29,18 @@ create unique index if not exists categories_system_name_idx
   on public.categories (lower(name))
   where user_id is null;
 
+-- Purposes
+create table if not exists public.purposes (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references public.profiles(id) on delete cascade,
+  name text not null,
+  is_system boolean not null default true,
+  created_at timestamptz not null default now(),
+  constraint purposes_scope_check check (
+    (is_system = true and user_id is null) or (is_system = false and user_id is not null)
+  )
+);
+
 -- Merchants
 create table if not exists public.merchants (
   id uuid primary key default gen_random_uuid(),
@@ -56,6 +68,7 @@ create table if not exists public.expenses (
   user_id uuid not null references public.profiles(id) on delete cascade,
   merchant_id uuid references public.merchants(id),
   category_id uuid references public.categories(id),
+  purpose_id uuid references public.purposes(id),
   amount numeric(14,2) not null check (amount >= 0),
   currency text not null,
   fx_rate_to_dop numeric(12,6),
@@ -67,6 +80,7 @@ create table if not exists public.expenses (
 
 create index if not exists expenses_user_date_idx on public.expenses (user_id, expense_date);
 create index if not exists expenses_user_category_idx on public.expenses (user_id, category_id);
+create index if not exists expenses_user_purpose_idx on public.expenses (user_id, purpose_id);
 create index if not exists expenses_user_merchant_idx on public.expenses (user_id, merchant_id);
 
 -- Exchange rates (optional, ready for v2)
@@ -116,6 +130,7 @@ for each row execute procedure public.handle_new_user();
 -- RLS
 alter table public.profiles enable row level security;
 alter table public.categories enable row level security;
+alter table public.purposes enable row level security;
 alter table public.merchants enable row level security;
 alter table public.expenses enable row level security;
 alter table public.exchange_rates enable row level security;
@@ -152,6 +167,19 @@ create policy "Categories delete" on public.categories
     (user_id = auth.uid() and is_system = false)
     or (is_system = true and user_id is null and public.is_admin(auth.uid()))
   );
+
+-- Purposes policies
+create policy "Purposes select" on public.purposes
+  for select using (is_system = true or user_id = auth.uid() or public.is_admin(user_id));
+
+create policy "Purposes insert" on public.purposes
+  for insert with check (public.is_admin(auth.uid()));
+
+create policy "Purposes update" on public.purposes
+  for update using (public.is_admin(auth.uid()));
+
+create policy "Purposes delete" on public.purposes
+  for delete using (public.is_admin(auth.uid()));
 
 -- Merchants policies
 create policy "Merchants select" on public.merchants

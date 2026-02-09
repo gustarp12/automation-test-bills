@@ -23,6 +23,7 @@ type CurrencyOption = {
 
 type ExpenseFormProps = {
   categories: Option[];
+  purposes: Option[];
   merchants: Option[];
   currencies: CurrencyOption[];
   locale: Locale;
@@ -75,6 +76,7 @@ function countIntegerDigits(raw: string) {
 
 export default function ExpenseForm({
   categories,
+  purposes,
   merchants,
   currencies,
   locale,
@@ -106,6 +108,7 @@ export default function ExpenseForm({
       ? currencies
       : [{ code: "DOP", name: "Dominican Peso", symbol: "RD$" }];
   const hasCategories = categories.length > 0;
+  const hasPurposes = purposes.length > 0;
 
   return (
     <form
@@ -192,7 +195,7 @@ export default function ExpenseForm({
         </label>
       ) : null}
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-3">
         <label className="text-sm">
           <span className="text-slate-300">{t(locale, "common.category")}</span>
           <select
@@ -212,6 +215,29 @@ export default function ExpenseForm({
           {!hasCategories ? (
             <p className="mt-2 text-xs text-amber-300">
               {t(locale, "expenses.noCategories")}
+            </p>
+          ) : null}
+        </label>
+
+        <label className="text-sm">
+          <span className="text-slate-300">{t(locale, "common.purpose")}</span>
+          <select
+            name="purpose_id"
+            className="mt-2 w-full rounded-xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-sm text-slate-100 outline-none focus:border-emerald-400"
+            defaultValue=""
+            required
+            disabled={!hasPurposes}
+          >
+            <option value=""></option>
+            {purposes.map((purpose) => (
+              <option key={purpose.id} value={purpose.id}>
+                {purpose.name}
+              </option>
+            ))}
+          </select>
+          {!hasPurposes ? (
+            <p className="mt-2 text-xs text-amber-300">
+              {t(locale, "expenses.noPurposes")}
             </p>
           ) : null}
         </label>
@@ -260,7 +286,10 @@ export default function ExpenseForm({
         <p className="text-sm text-slate-300">{state.message}</p>
       ) : null}
 
-      <SubmitButton label={t(locale, "common.addExpense")} disabled={!hasCategories} />
+      <SubmitButton
+        label={t(locale, "common.addExpense")}
+        disabled={!hasCategories || !hasPurposes}
+      />
     </form>
   );
 }
