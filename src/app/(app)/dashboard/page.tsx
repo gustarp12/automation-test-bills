@@ -181,6 +181,7 @@ export default async function DashboardPage() {
   const trendStartStr = trendStart.toISOString().slice(0, 10);
 
   const trendExpenses = await fetchExpensesInRange(supabase, trendStartStr, todayStr);
+  const trendIncomes = await fetchIncomesInRange(supabase, trendStartStr, todayStr);
 
   const trendMap = new Map<string, number>();
   (trendExpenses ?? []).forEach((row) => {
@@ -201,7 +202,33 @@ export default async function DashboardPage() {
     };
   });
 
-  const maxTrendTotal = Math.max(1, ...trendMonths.map((item) => item.total));
+  const maxExpenseTrendTotal = Math.max(1, ...trendMonths.map((item) => item.total));
+
+  const incomeTrendMap = new Map<string, number>();
+  (trendIncomes ?? []).forEach((row) => {
+    const key = String(row.income_date ?? "").slice(0, 7);
+    if (!key) return;
+    incomeTrendMap.set(key, (incomeTrendMap.get(key) ?? 0) + Number(row.amount_dop ?? 0));
+  });
+
+  const incomeTrendMonths = trendMonths.map((month) => ({
+    key: month.key,
+    label: month.label,
+    total: incomeTrendMap.get(month.key) ?? 0,
+  }));
+
+  const maxIncomeTrendTotal = Math.max(1, ...incomeTrendMonths.map((item) => item.total));
+
+  const netTrendMonths = trendMonths.map((month) => ({
+    key: month.key,
+    label: month.label,
+    total: (incomeTrendMap.get(month.key) ?? 0) - (trendMap.get(month.key) ?? 0),
+  }));
+
+  const maxNetMagnitude = Math.max(
+    1,
+    ...netTrendMonths.map((item) => Math.abs(item.total))
+  );
 
   const budgetsRaw = await fetchBudgetsForMonth(supabase, thisMonthStartStr);
 
@@ -219,6 +246,45 @@ export default async function DashboardPage() {
   const budgetPercent = budgetTotal
     ? Math.min(100, Math.round((thisMonthTotal / budgetTotal) * 100))
     : null;
+
+  const renderTrend = (
+    title: string,
+    months: { key: string; label: string; total: number }[],
+    maxValue: number,
+    variant: "expense" | "income" | "net"
+  ) => {
+    const colorFor = (value: number) => {
+      if (variant === "expense") return "bg-sky-400/70";
+      if (variant === "income") return "bg-emerald-400/80";
+      return value >= 0 ? "bg-emerald-400/80" : "bg-rose-400/80";
+    };
+
+    return (
+      <div className="space-y-3">
+        <p className="text-xs uppercase text-slate-400">{title}</p>
+        <div className="grid grid-cols-6 items-end gap-2">
+          {months.map((month) => {
+            const magnitude = Math.abs(month.total);
+            const height = maxValue
+              ? Math.max(6, Math.round((magnitude / maxValue) * 96))
+              : 6;
+            return (
+              <div key={month.key} className="flex flex-col items-center gap-2">
+                <div className="h-24 w-full rounded-full bg-slate-800/60">
+                  <div
+                    className={`w-full rounded-full ${colorFor(month.total)}`}
+                    style={{ height: `${height}%` }}
+                    title={formatCurrency(month.total, "DOP", locale)}
+                  />
+                </div>
+                <span className="text-xs text-slate-400">{month.label}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -307,26 +373,30 @@ export default async function DashboardPage() {
       <div className="grid gap-4 lg:grid-cols-3">
         <section className="rounded-2xl border border-slate-800/80 bg-slate-950/70 p-4 backdrop-blur lg:col-span-2">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold">{t(locale, "dashboard.trendTitle")}</h2>
+            <h2 className="text-sm font-semibold">{t(locale, "dashboard.trendsTitle")}</h2>
             <span className="text-xs text-slate-500">
               {t(locale, "dashboard.trendSubtitle")}
             </span>
           </div>
-          <div className="mt-4 grid grid-cols-6 items-end gap-3">
-            {trendMonths.map((month) => (
-              <div key={month.key} className="flex flex-col items-center gap-2">
-                <div className="h-24 w-full rounded-full bg-slate-800/60">
-                  <div
-                    className="w-full rounded-full bg-emerald-400/80"
-                    style={{
-                      height: `${Math.max(8, Math.round((month.total / maxTrendTotal) * 96))}%`,
-                    }}
-                    title={formatCurrency(month.total, "DOP", locale)}
-                  />
-                </div>
-                <span className="text-xs text-slate-400">{month.label}</span>
-              </div>
-            ))}
+          <div className="mt-4 grid gap-6 md:grid-cols-3">
+            {renderTrend(
+              t(locale, "dashboard.expenseTrend"),
+              trendMonths,
+              maxExpenseTrendTotal,
+              "expense"
+            )}
+            {renderTrend(
+              t(locale, "dashboard.incomeTrend"),
+              incomeTrendMonths,
+              maxIncomeTrendTotal,
+              "income"
+            )}
+            {renderTrend(
+              t(locale, "dashboard.netTrend"),
+              netTrendMonths,
+              maxNetMagnitude,
+              "net"
+            )}
           </div>
         </section>
 

@@ -27,6 +27,7 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const from = searchParams.get("from");
   const to = searchParams.get("to");
+  const currency = searchParams.get("currency");
   const locale = normalizeLocale(searchParams.get("locale"));
 
   let query = supabase
@@ -39,6 +40,9 @@ export async function GET(request: Request) {
   }
   if (to) {
     query = query.lte("income_date", to);
+  }
+  if (currency) {
+    query = query.eq("currency", currency.toUpperCase());
   }
 
   const { data, error } = await query;
