@@ -118,6 +118,8 @@ export default async function ExpensesPage({
   const { data: expensesRaw } = await expensesQuery.range(offset, offset + pageSize);
   const hasNext = (expensesRaw ?? []).length > pageSize;
   const pageRows = (expensesRaw ?? []).slice(0, pageSize);
+  const showingStart = pageRows.length > 0 ? offset + 1 : 0;
+  const showingEnd = offset + pageRows.length;
 
   const expenses: ExpenseRowData[] = pageRows.map((row) => {
     const merchantsValue = row.merchants as { name?: string } | { name?: string }[] | null;
@@ -333,9 +335,16 @@ export default async function ExpensesPage({
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-800/80 bg-slate-950/60 px-4 py-3 text-xs text-slate-400 backdrop-blur">
-          <span>
-            {t(locale, "common.page")} {page}
-          </span>
+          <div className="space-y-1">
+            <span>
+              {t(locale, "common.page")} {page}
+            </span>
+            <span className="block text-xs text-slate-500">
+              {t(locale, "common.showingRange")
+                .replace("{start}", String(showingStart))
+                .replace("{end}", String(showingEnd))}
+            </span>
+          </div>
           <div className="flex flex-wrap items-center gap-3">
             <Link
               href={buildPageHref(page - 1)}
