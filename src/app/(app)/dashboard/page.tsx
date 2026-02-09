@@ -286,14 +286,14 @@ export default async function DashboardPage() {
               return (
                 <div key={month.key} className="flex h-full flex-col items-center gap-2">
                   <div className="flex h-full w-full items-end gap-1">
-                    <div className="flex h-full w-full items-end">
+                    <div className="flex h-full flex-1 items-end">
                       <div
                         className="w-full rounded-full bg-emerald-400/80"
                         style={{ height: `${incomeHeight}%` }}
                         title={formatCurrency(incomeValue, "DOP", locale)}
                       />
                     </div>
-                    <div className="flex h-full w-full items-end">
+                    <div className="flex h-full flex-1 items-end">
                       <div
                         className="w-full rounded-full bg-sky-400/70"
                         style={{ height: `${expenseHeight}%` }}
