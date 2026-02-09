@@ -91,6 +91,11 @@ export default async function DashboardPage() {
     .sort((a, b) => b[1] - a[1])
     .slice(0, 5);
 
+  const topCategories = Object.entries(categoryTotals)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5);
+  const maxCategoryTotal = Math.max(1, ...topCategories.map((item) => item[1]));
+
   const trendStart = new Date(now.getFullYear(), now.getMonth() - 5, 1);
   const trendStartStr = trendStart.toISOString().slice(0, 10);
 
@@ -246,6 +251,39 @@ export default async function DashboardPage() {
               ))
             )}
           </div>
+
+          <div>
+            <h2 className="text-sm font-semibold">{t(locale, "dashboard.categoryBreakdown")}</h2>
+            <p className="text-xs text-slate-500">
+              {t(locale, "dashboard.categoryBreakdownNote")}
+            </p>
+          </div>
+          <div className="space-y-3">
+            {topCategories.length === 0 ? (
+              <p className="text-xs text-slate-500">{t(locale, "dashboard.awaiting")}</p>
+            ) : (
+              topCategories.map(([name, total]) => {
+                const width = Math.max(8, Math.round((total / maxCategoryTotal) * 100));
+                return (
+                  <div key={name} className="space-y-1">
+                    <div className="flex items-center justify-between text-xs text-slate-300">
+                      <span>{name}</span>
+                      <span>
+                        {formatCurrency(total, "DOP", locale)}
+                      </span>
+                    </div>
+                    <div className="h-2 w-full rounded-full bg-slate-800">
+                      <div
+                        className="h-full rounded-full bg-emerald-400/80"
+                        style={{ width: `${width}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
           <div>
             <h2 className="text-sm font-semibold">{t(locale, "dashboard.budgetBreakdown")}</h2>
             <p className="text-xs text-slate-500">{t(locale, "dashboard.budgetBreakdownNote")}</p>

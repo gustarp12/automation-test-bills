@@ -85,6 +85,8 @@ const messages: Record<Locale, Record<string, string>> = {
     "dashboard.topMerchantsNote": "This month",
     "dashboard.budgetBreakdown": "Budget breakdown",
     "dashboard.budgetBreakdownNote": "This month vs budgets",
+    "dashboard.categoryBreakdown": "Category breakdown",
+    "dashboard.categoryBreakdownNote": "Top categories this month",
 
     "expenses.title": "Log an expense",
     "expenses.subtitle": "Keep a clean record and let the totals roll up in DOP.",
@@ -289,6 +291,8 @@ const messages: Record<Locale, Record<string, string>> = {
     "dashboard.topMerchantsNote": "Este mes",
     "dashboard.budgetBreakdown": "Detalle de presupuesto",
     "dashboard.budgetBreakdownNote": "Mes actual vs presupuesto",
+    "dashboard.categoryBreakdown": "Detalle por categoría",
+    "dashboard.categoryBreakdownNote": "Principales categorías del mes",
 
     "expenses.title": "Registrar un gasto",
     "expenses.subtitle": "Mantén un registro limpio y deja que los totales se calculen en DOP.",
