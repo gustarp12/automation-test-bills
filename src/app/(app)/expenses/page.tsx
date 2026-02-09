@@ -41,9 +41,11 @@ type SearchParams = {
   merchant?: string;
   currency?: string;
   page?: string;
+  pageSize?: string;
 };
 
-const PAGE_SIZE = 25;
+const DEFAULT_PAGE_SIZE = 25;
+const ALLOWED_PAGE_SIZES = [10, 25, 50, 100];
 
 export default async function ExpensesPage({
   searchParams,
@@ -107,11 +109,15 @@ export default async function ExpensesPage({
   }
 
   const page = Math.max(1, Number(filters.page ?? "1") || 1);
-  const offset = (page - 1) * PAGE_SIZE;
+  const requestedPageSize = Number(filters.pageSize ?? "");
+  const pageSize = ALLOWED_PAGE_SIZES.includes(requestedPageSize)
+    ? requestedPageSize
+    : DEFAULT_PAGE_SIZE;
+  const offset = (page - 1) * pageSize;
 
-  const { data: expensesRaw } = await expensesQuery.range(offset, offset + PAGE_SIZE);
-  const hasNext = (expensesRaw ?? []).length > PAGE_SIZE;
-  const pageRows = (expensesRaw ?? []).slice(0, PAGE_SIZE);
+  const { data: expensesRaw } = await expensesQuery.range(offset, offset + pageSize);
+  const hasNext = (expensesRaw ?? []).length > pageSize;
+  const pageRows = (expensesRaw ?? []).slice(0, pageSize);
 
   const expenses: ExpenseRowData[] = pageRows.map((row) => {
     const merchantsValue = row.merchants as { name?: string } | { name?: string }[] | null;
@@ -150,6 +156,7 @@ export default async function ExpensesPage({
   if (filters.category) pageParams.set("category", filters.category);
   if (filters.merchant) pageParams.set("merchant", filters.merchant);
   if (filters.currency) pageParams.set("currency", filters.currency);
+  if (pageSize !== DEFAULT_PAGE_SIZE) pageParams.set("pageSize", String(pageSize));
 
   const buildPageHref = (targetPage: number) => {
     const params = new URLSearchParams(pageParams);
@@ -202,7 +209,7 @@ export default async function ExpensesPage({
           </div>
         </div>
 
-        <form className="grid gap-3 rounded-2xl border border-slate-800/80 bg-slate-950/70 p-4 backdrop-blur md:grid-cols-5">
+        <form className="grid gap-3 rounded-2xl border border-slate-800/80 bg-slate-950/70 p-4 backdrop-blur md:grid-cols-6">
           <label className="text-xs text-slate-300">
             {t(locale, "common.from")}
             <input
@@ -266,6 +273,20 @@ export default async function ExpensesPage({
               ))}
             </select>
           </label>
+          <label className="text-xs text-slate-300">
+            {t(locale, "common.pageSize")}
+            <select
+              name="pageSize"
+              defaultValue={String(pageSize)}
+              className="mt-1 w-full rounded-lg border border-slate-800 bg-slate-950/80 px-3 py-2 text-xs text-slate-100 outline-none focus:border-emerald-400"
+            >
+              {ALLOWED_PAGE_SIZES.map((size) => (
+                <option key={size} value={size}>
+                  {size}
+                </option>
+              ))}
+            </select>
+          </label>
           <div className="col-span-full flex flex-wrap gap-2">
             <button
               type="submit"
@@ -315,7 +336,7 @@ export default async function ExpensesPage({
           <span>
             {t(locale, "common.page")} {page}
           </span>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-3">
             <Link
               href={buildPageHref(page - 1)}
               className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${
@@ -336,6 +357,30 @@ export default async function ExpensesPage({
             >
               {t(locale, "common.next")}
             </Link>
+            <form method="get" className="flex items-center gap-2 text-xs">
+              <input type="hidden" name="from" value={filters.from ?? ""} />
+              <input type="hidden" name="to" value={filters.to ?? ""} />
+              <input type="hidden" name="category" value={filters.category ?? ""} />
+              <input type="hidden" name="merchant" value={filters.merchant ?? ""} />
+              <input type="hidden" name="currency" value={filters.currency ?? ""} />
+              <input type="hidden" name="pageSize" value={String(pageSize)} />
+              <label className="flex items-center gap-2">
+                <span className="text-slate-400">{t(locale, "common.jumpToPage")}</span>
+                <input
+                  name="page"
+                  type="number"
+                  min={1}
+                  defaultValue={page}
+                  className="w-20 rounded-lg border border-slate-800 bg-slate-950/80 px-2 py-1 text-xs text-slate-100 outline-none focus:border-emerald-400"
+                />
+              </label>
+              <button
+                type="submit"
+                className="rounded-full border border-slate-700 px-3 py-1 text-xs font-semibold text-slate-200 transition hover:border-slate-500"
+              >
+                {t(locale, "common.go")}
+              </button>
+            </form>
           </div>
         </div>
       </section>
