@@ -112,22 +112,23 @@ export default async function DashboardPage() {
           },
         ]
       : []),
-  ];
+  ].filter((segment) => segment.total > 0);
 
-  const donutGradient = (() => {
-    if (!thisMonthTotal || categorySegments.length === 0) {
-      return "conic-gradient(#1f2937 0% 100%)";
-    }
-    let current = 0;
-    const stops = categorySegments.map((segment) => {
-      const percent = (segment.total / thisMonthTotal) * 100;
-      const start = current;
-      const end = current + percent;
-      current = end;
-      return `${segment.color} ${start.toFixed(2)}% ${end.toFixed(2)}%`;
-    });
-    return `conic-gradient(${stops.join(", ")})`;
-  })();
+  const donutSize = 140;
+  const donutStroke = 16;
+  const donutRadius = (donutSize - donutStroke) / 2;
+  const donutCenter = donutSize / 2;
+  const donutCircumference = 2 * Math.PI * donutRadius;
+
+  let donutOffset = 0;
+  const donutSegments = categorySegments.map((segment) => {
+    const percent = thisMonthTotal ? segment.total / thisMonthTotal : 0;
+    const length = percent * donutCircumference;
+    const dasharray = `${length} ${donutCircumference - length}`;
+    const dashoffset = -donutOffset;
+    donutOffset += length;
+    return { ...segment, dasharray, dashoffset, percent };
+  });
 
   const trendStart = new Date(now.getFullYear(), now.getMonth() - 5, 1);
   const trendStartStr = trendStart.toISOString().slice(0, 10);
@@ -297,10 +298,44 @@ export default async function DashboardPage() {
             ) : (
               <div className="flex flex-wrap items-center gap-6">
                 <div className="relative h-36 w-36">
-                  <div
-                    className="h-full w-full rounded-full"
-                    style={{ background: donutGradient }}
-                  />
+                  <svg
+                    width={donutSize}
+                    height={donutSize}
+                    viewBox={`0 0 ${donutSize} ${donutSize}`}
+                    className="block"
+                  >
+                    <circle
+                      cx={donutCenter}
+                      cy={donutCenter}
+                      r={donutRadius}
+                      fill="transparent"
+                      stroke="#1f2937"
+                      strokeWidth={donutStroke}
+                    />
+                    <g transform={`rotate(-90 ${donutCenter} ${donutCenter})`}>
+                      {donutSegments.map((segment) => (
+                        <circle
+                          key={`${segment.name}-${segment.total}`}
+                          cx={donutCenter}
+                          cy={donutCenter}
+                          r={donutRadius}
+                          fill="transparent"
+                          stroke={segment.color}
+                          strokeWidth={donutStroke}
+                          strokeDasharray={segment.dasharray}
+                          strokeDashoffset={segment.dashoffset}
+                        >
+                          <title>
+                            {`${segment.name}: ${formatCurrency(
+                              segment.total,
+                              "DOP",
+                              locale
+                            )} (${Math.round(segment.percent * 100)}%)`}
+                          </title>
+                        </circle>
+                      ))}
+                    </g>
+                  </svg>
                   <div className="absolute inset-4 flex flex-col items-center justify-center rounded-full border border-slate-800 bg-slate-950/90 text-center text-xs text-slate-300">
                     <span className="text-[10px] uppercase text-slate-500">
                       {t(locale, "dashboard.thisMonth")}
@@ -311,10 +346,8 @@ export default async function DashboardPage() {
                   </div>
                 </div>
                 <div className="flex-1 space-y-2">
-                  {categorySegments.map((segment) => {
-                    const percent = thisMonthTotal
-                      ? Math.round((segment.total / thisMonthTotal) * 100)
-                      : 0;
+                  {donutSegments.map((segment) => {
+                    const percent = Math.round(segment.percent * 100);
                     return (
                       <div
                         key={`${segment.name}-${segment.total}`}
