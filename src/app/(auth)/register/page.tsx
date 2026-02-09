@@ -14,13 +14,13 @@ export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  const [notice, setNotice] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
-    setNotice(null);
+    setNotice(false);
     setIsLoading(true);
 
     try {
@@ -36,7 +36,7 @@ export default function RegisterPage() {
       }
 
       if (!data.session) {
-        setNotice(t(locale, "auth.checkEmail"));
+        setNotice(true);
         return;
       }
 
@@ -82,7 +82,14 @@ export default function RegisterPage() {
         </label>
 
         {error ? <p className="text-sm text-rose-400">{error}</p> : null}
-        {notice ? <p className="text-sm text-emerald-300">{notice}</p> : null}
+        {notice ? (
+          <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+            <p className="font-semibold">{t(locale, "auth.thanksTitle")}</p>
+            <p className="mt-1 text-xs text-emerald-100/80">
+              {t(locale, "auth.thanksBody")}
+            </p>
+          </div>
+        ) : null}
 
         <button
           type="submit"

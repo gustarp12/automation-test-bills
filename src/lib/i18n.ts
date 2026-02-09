@@ -65,6 +65,9 @@ const messages: Record<Locale, Record<string, string>> = {
     "auth.alreadyHaveAccount": "Already have an account?",
     "auth.signInLink": "Sign in",
     "auth.checkEmail": "Check your email to confirm your account before signing in.",
+    "auth.thanksTitle": "Thanks for signing up!",
+    "auth.thanksBody":
+      "Please check your inbox to confirm your account before signing in.",
     "auth.signingIn": "Signing in...",
     "auth.creating": "Creating account...",
 
@@ -271,6 +274,9 @@ const messages: Record<Locale, Record<string, string>> = {
     "auth.alreadyHaveAccount": "¿Ya tienes cuenta?",
     "auth.signInLink": "Iniciar sesión",
     "auth.checkEmail":
+      "Revisa tu correo para confirmar tu cuenta antes de iniciar sesión.",
+    "auth.thanksTitle": "¡Gracias por registrarte!",
+    "auth.thanksBody":
       "Revisa tu correo para confirmar tu cuenta antes de iniciar sesión.",
     "auth.signingIn": "Iniciando sesión...",
     "auth.creating": "Creando cuenta...",
