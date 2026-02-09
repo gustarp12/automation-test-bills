@@ -34,6 +34,9 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
                 <Link className="hover:text-slate-200" href="/expenses">
                   {t(locale, "nav.expenses")}
                 </Link>
+                <Link className="hover:text-slate-200" href="/budgets">
+                  {t(locale, "nav.budgets")}
+                </Link>
                 {isAdmin ? (
                   <>
                     <Link className="hover:text-slate-200" href="/categories">
@@ -44,6 +47,9 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
                     </Link>
                     <Link className="hover:text-slate-200" href="/currencies">
                       {t(locale, "nav.currencies")}
+                    </Link>
+                    <Link className="hover:text-slate-200" href="/admin">
+                      {t(locale, "nav.admin")}
                     </Link>
                   </>
                 ) : null}

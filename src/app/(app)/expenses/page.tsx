@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import ExpenseForm from "./expense-form";
+import CsvImport from "./csv-import";
 import ExpenseRow from "./expense-row";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getLocale } from "@/lib/i18n-server";
@@ -146,6 +147,13 @@ export default async function ExpensesPage({
       </div>
 
       <ExpenseForm
+        categories={(categories ?? []) as Option[]}
+        merchants={(merchants ?? []) as Option[]}
+        currencies={(activeCurrencies ?? []) as CurrencyOption[]}
+        locale={locale}
+      />
+
+      <CsvImport
         categories={(categories ?? []) as Option[]}
         merchants={(merchants ?? []) as Option[]}
         currencies={(activeCurrencies ?? []) as CurrencyOption[]}

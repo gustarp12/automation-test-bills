@@ -1,0 +1,134 @@
+import { redirect } from "next/navigation";
+
+import BudgetForm from "./budget-form";
+import { deleteBudget } from "./actions";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { formatCurrency } from "@/lib/format";
+import { getLocale } from "@/lib/i18n-server";
+import { t } from "@/lib/i18n";
+
+type BudgetRow = {
+  id: string;
+  amount: string | number;
+  month: string;
+  categories?: { name?: string } | null;
+};
+
+type SearchParams = {
+  month?: string;
+};
+
+export default async function BudgetsPage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}) {
+  const params = await searchParams;
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  const locale = await getLocale();
+  const now = new Date();
+  const monthDefault = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const monthParam = params.month ?? monthDefault;
+  const monthValue = `${monthParam}-01`;
+
+  const { data: categories } = await supabase
+    .from("categories")
+    .select("id, name")
+    .order("is_system", { ascending: false })
+    .order("name", { ascending: true });
+
+  const { data: budgetsRaw } = await supabase
+    .from("budgets")
+    .select("id, amount, month, categories(name)")
+    .eq("month", monthValue)
+    .order("amount", { ascending: false });
+
+  const budgets = (budgetsRaw ?? []).map((row) => {
+    const categoriesValue = row.categories as { name?: string } | { name?: string }[] | null;
+    return {
+      ...row,
+      categories: Array.isArray(categoriesValue)
+        ? categoriesValue[0] ?? null
+        : categoriesValue ?? null,
+    } as BudgetRow;
+  });
+
+  return (
+    <div className="space-y-6">
+      <div className="space-y-2">
+        <p className="text-sm uppercase tracking-[0.3em] text-slate-400">
+          {t(locale, "budgets.label")}
+        </p>
+        <h1 className="text-3xl font-semibold">{t(locale, "budgets.title")}</h1>
+        <p className="text-sm text-slate-400">{t(locale, "budgets.subtitle")}</p>
+      </div>
+
+      <BudgetForm
+        categories={(categories ?? []) as { id: string; name: string }[]}
+        locale={locale}
+        monthDefault={monthParam}
+      />
+
+      <section className="space-y-4 rounded-2xl border border-slate-800 bg-slate-900/40 p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 className="text-lg font-semibold">{t(locale, "budgets.listTitle")}</h2>
+            <p className="text-xs text-slate-500">{t(locale, "budgets.listNote")}</p>
+          </div>
+          <form>
+            <label className="text-xs text-slate-300">
+              {t(locale, "budgets.month")}
+              <input
+                name="month"
+                type="month"
+                defaultValue={monthParam}
+                className="ml-2 rounded-lg border border-slate-800 bg-slate-950/80 px-3 py-1 text-xs text-slate-100 outline-none focus:border-emerald-400"
+              />
+            </label>
+          </form>
+        </div>
+        <div className="grid gap-2">
+          {budgets.length === 0 ? (
+            <p className="text-sm text-slate-500">{t(locale, "budgets.none")}</p>
+          ) : (
+            budgets.map((budget) => (
+              <div
+                key={budget.id}
+                className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-950/40 px-4 py-2 text-sm"
+              >
+                <div>
+                  <p className="font-medium">{budget.categories?.name ?? "—"}</p>
+                  <p className="text-xs text-slate-500">
+                    {t(locale, "budgets.monthLabel")} {budget.month}
+                  </p>
+                </div>
+                <div className="flex items-center gap-4">
+                  <span className="text-sm font-semibold">
+                    {formatCurrency(Number(budget.amount), "DOP", locale)}
+                  </span>
+                  <form action={deleteBudget}>
+                    <input type="hidden" name="id" value={budget.id} />
+                    <button
+                      type="submit"
+                      className="text-xs text-rose-300 hover:text-rose-200"
+                    >
+                      {t(locale, "common.delete")}
+                    </button>
+                  </form>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </section>
+    </div>
+  );
+}
