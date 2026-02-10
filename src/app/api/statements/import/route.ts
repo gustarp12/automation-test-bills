@@ -57,7 +57,7 @@ export async function POST(request: Request) {
     expense_date: string;
     notes: string | null;
     category_id: string;
-    purpose_id: string;
+    purpose_id: string | null;
     merchant_id: string | null;
   }[] = [];
 
