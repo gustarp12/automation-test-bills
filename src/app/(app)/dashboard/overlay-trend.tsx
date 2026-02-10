@@ -22,7 +22,6 @@ export default function OverlayTrend({ months, locale }: OverlayTrendProps) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
   const chartHeight = 160;
-  const barMinHeight = 6;
 
   const maxValue = useMemo(() => {
     return Math.max(
@@ -81,8 +80,10 @@ export default function OverlayTrend({ months, locale }: OverlayTrendProps) {
 
         <div className="relative grid grid-cols-6 gap-3 pt-4" style={{ height: chartHeight + 32 }}>
           {months.map((month, index) => {
-            const incomeHeight = Math.max(barMinHeight, Math.round((month.income / maxValue) * 100));
-            const expenseHeight = Math.max(barMinHeight, Math.round((month.expense / maxValue) * 100));
+            const incomeHeight =
+              month.income > 0 ? (month.income / maxValue) * (chartHeight / 2) : 0;
+            const expenseHeight =
+              month.expense > 0 ? (month.expense / maxValue) * (chartHeight / 2) : 0;
             const isActive = activeIndex === index;
 
             return (
@@ -99,14 +100,14 @@ export default function OverlayTrend({ months, locale }: OverlayTrendProps) {
                   <div
                     className={`absolute left-0 w-[46%] rounded-full transition ${isActive ? "bg-emerald-300" : "bg-emerald-400/80"}`}
                     style={{
-                      height: `${(incomeHeight / 100) * (chartHeight / 2)}px`,
+                      height: `${incomeHeight}px`,
                       bottom: `${zeroY}px`,
                     }}
                   />
                   <div
                     className={`absolute right-0 w-[46%] rounded-full transition ${isActive ? "bg-sky-300" : "bg-sky-400/70"}`}
                     style={{
-                      height: `${(expenseHeight / 100) * (chartHeight / 2)}px`,
+                      height: `${expenseHeight}px`,
                       bottom: `${zeroY}px`,
                     }}
                   />
