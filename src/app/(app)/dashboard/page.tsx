@@ -2,6 +2,7 @@ import { cache } from "react";
 import { redirect } from "next/navigation";
 
 import CategoryDonut from "./category-donut";
+import OverlayTrend from "./overlay-trend";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { formatCurrency } from "@/lib/format";
 import { getLocale } from "@/lib/i18n-server";
@@ -202,8 +203,6 @@ export default async function DashboardPage() {
     };
   });
 
-  const maxExpenseTrendTotal = Math.max(1, ...trendMonths.map((item) => item.total));
-
   const incomeTrendMap = new Map<string, number>();
   (trendIncomes ?? []).forEach((row) => {
     const key = String(row.income_date ?? "").slice(0, 7);
@@ -217,18 +216,11 @@ export default async function DashboardPage() {
     total: incomeTrendMap.get(month.key) ?? 0,
   }));
 
-  const maxIncomeTrendTotal = Math.max(1, ...incomeTrendMonths.map((item) => item.total));
-
   const netTrendMonths = trendMonths.map((month) => ({
     key: month.key,
     label: month.label,
     total: (incomeTrendMap.get(month.key) ?? 0) - (trendMap.get(month.key) ?? 0),
   }));
-
-  const maxNetMagnitude = Math.max(
-    1,
-    ...netTrendMonths.map((item) => Math.abs(item.total))
-  );
 
   const budgetsRaw = await fetchBudgetsForMonth(supabase, thisMonthStartStr);
 
@@ -247,110 +239,13 @@ export default async function DashboardPage() {
     ? Math.min(100, Math.round((thisMonthTotal / budgetTotal) * 100))
     : null;
 
-  const renderOverlayTrend = () => {
-    const maxOverlay = Math.max(1, maxExpenseTrendTotal, maxIncomeTrendTotal);
-    const chartHeight = 88;
-    const lineHeight = chartHeight;
-    const xPadding = 6;
-    const step = (100 - xPadding * 2) / Math.max(1, trendMonths.length - 1);
-    const netPoints = netTrendMonths
-      .map((month, index) => {
-        const normalized = maxNetMagnitude
-          ? (month.total + maxNetMagnitude) / (maxNetMagnitude * 2)
-          : 0.5;
-        const y = Math.max(0, Math.min(lineHeight, lineHeight - normalized * lineHeight));
-        const x = xPadding + index * step;
-        return `${x},${y}`;
-      })
-      .join(" ");
-
-    const zeroY = lineHeight / 2;
-
-    return (
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-xs uppercase text-slate-400">
-              {t(locale, "dashboard.overlayTrendTitle")}
-            </p>
-            <p className="text-xs text-slate-500">{t(locale, "dashboard.overlayTrendNote")}</p>
-          </div>
-          <span className="text-xs text-slate-500">{t(locale, "dashboard.trendSubtitle")}</span>
-        </div>
-
-        <div className="relative">
-          <div className="grid grid-cols-6 gap-3">
-            {trendMonths.map((month, index) => {
-              const incomeValue = incomeTrendMonths[index]?.total ?? 0;
-              const expenseValue = month.total ?? 0;
-              const incomeHeight = Math.max(6, Math.round((incomeValue / maxOverlay) * 100));
-              const expenseHeight = Math.max(6, Math.round((expenseValue / maxOverlay) * 100));
-
-              return (
-                <div key={month.key} className="flex flex-col items-center gap-2">
-                  <div className="flex w-full items-end gap-1" style={{ height: chartHeight }}>
-                    <div className="flex flex-1 items-end">
-                      <div
-                        className="w-full rounded-full bg-emerald-400/80"
-                        style={{ height: `${incomeHeight}%` }}
-                        title={formatCurrency(incomeValue, "DOP", locale)}
-                      />
-                    </div>
-                    <div className="flex flex-1 items-end">
-                      <div
-                        className="w-full rounded-full bg-sky-400/70"
-                        style={{ height: `${expenseHeight}%` }}
-                        title={formatCurrency(expenseValue, "DOP", locale)}
-                      />
-                    </div>
-                  </div>
-                  <span className="text-xs text-slate-400">{month.label}</span>
-                </div>
-              );
-            })}
-          </div>
-          <svg
-            className="pointer-events-none absolute inset-x-0 top-0"
-            style={{ height: chartHeight }}
-            viewBox={`0 0 100 ${lineHeight}`}
-            preserveAspectRatio="none"
-          >
-            <line
-              x1="0"
-              y1={zeroY}
-              x2="100"
-              y2={zeroY}
-              stroke="rgba(148,163,184,0.2)"
-              strokeWidth="1"
-            />
-            <polyline
-              points={netPoints}
-              fill="none"
-              stroke="rgba(251,191,36,0.9)"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </div>
-
-        <div className="flex flex-wrap gap-4 text-xs text-slate-400">
-          <span className="flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-emerald-400/80" />
-            {t(locale, "dashboard.incomeTrend")}
-          </span>
-          <span className="flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-sky-400/70" />
-            {t(locale, "dashboard.expenseTrend")}
-          </span>
-          <span className="flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-amber-300/90" />
-            {t(locale, "dashboard.netTrend")}
-          </span>
-        </div>
-      </div>
-    );
-  };
+  const overlayMonths = trendMonths.map((month, index) => ({
+    key: month.key,
+    label: month.label,
+    income: incomeTrendMonths[index]?.total ?? 0,
+    expense: month.total ?? 0,
+    net: netTrendMonths[index]?.total ?? 0,
+  }));
 
   return (
     <div className="space-y-6">
@@ -438,7 +333,7 @@ export default async function DashboardPage() {
 
       <div className="grid gap-4 lg:grid-cols-3">
         <section className="rounded-2xl border border-slate-800/80 bg-slate-950/70 p-4 backdrop-blur lg:col-span-2">
-          {renderOverlayTrend()}
+          <OverlayTrend months={overlayMonths} locale={locale} />
         </section>
 
         <section className="space-y-4 rounded-2xl border border-slate-800/80 bg-slate-950/70 p-4 backdrop-blur">

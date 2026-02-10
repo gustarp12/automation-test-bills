@@ -22,6 +22,7 @@ const DONUT_STROKE = 16;
 
 export default function CategoryDonut({ segments, total, locale }: CategoryDonutProps) {
   const wrapperRef = useRef<HTMLDivElement | null>(null);
+  const [activeSegment, setActiveSegment] = useState<Segment | null>(null);
   const [tooltip, setTooltip] = useState<{
     name: string;
     total: number;
@@ -50,6 +51,12 @@ export default function CategoryDonut({ segments, total, locale }: CategoryDonut
   }, [segments, total, circumference]);
 
   const showEmpty = donutSegments.length === 0;
+
+  const displayTotal = activeSegment ? activeSegment.total : total;
+  const displayLabel = activeSegment ? activeSegment.name : t(locale, "dashboard.thisMonth");
+  const displayPercent = activeSegment
+    ? `${Math.round((activeSegment.total / total) * 100)}%`
+    : null;
 
   return (
     <div className="space-y-3" ref={wrapperRef}>
@@ -81,12 +88,17 @@ export default function CategoryDonut({ segments, total, locale }: CategoryDonut
                     r={radius}
                     fill="transparent"
                     stroke={segment.color}
-                    strokeWidth={DONUT_STROKE}
+                    strokeWidth={activeSegment?.name === segment.name ? DONUT_STROKE + 2 : DONUT_STROKE}
                     strokeDasharray={segment.dasharray}
                     strokeDashoffset={segment.dashoffset}
+                    className="cursor-pointer transition-opacity"
+                    style={{
+                      opacity: activeSegment && activeSegment.name !== segment.name ? 0.35 : 1,
+                    }}
                     onMouseMove={(event) => {
                       const rect = wrapperRef.current?.getBoundingClientRect();
                       if (!rect) return;
+                      setActiveSegment(segment);
                       setTooltip({
                         name: segment.name,
                         total: segment.total,
@@ -95,18 +107,24 @@ export default function CategoryDonut({ segments, total, locale }: CategoryDonut
                         y: event.clientY - rect.top,
                       });
                     }}
-                    onMouseLeave={() => setTooltip(null)}
+                    onMouseLeave={() => {
+                      setTooltip(null);
+                      setActiveSegment(null);
+                    }}
                   />
                 ))}
               </g>
             </svg>
             <div className="absolute inset-4 flex flex-col items-center justify-center rounded-full border border-slate-800 bg-slate-950/90 text-center text-xs text-slate-300">
               <span className="text-[10px] uppercase text-slate-500">
-                {t(locale, "dashboard.thisMonth")}
+                {displayLabel}
               </span>
               <span className="mt-1 text-sm font-semibold text-slate-100">
-                {formatCurrency(total, "DOP", locale)}
+                {formatCurrency(displayTotal, "DOP", locale)}
               </span>
+              {displayPercent ? (
+                <span className="text-[10px] text-slate-400">{displayPercent}</span>
+              ) : null}
             </div>
           </div>
           <div className="flex-1 space-y-2">
@@ -116,6 +134,8 @@ export default function CategoryDonut({ segments, total, locale }: CategoryDonut
                 <div
                   key={`${segment.name}-${segment.total}`}
                   className="flex items-center justify-between text-xs text-slate-300"
+                  onMouseEnter={() => setActiveSegment(segment)}
+                  onMouseLeave={() => setActiveSegment(null)}
                 >
                   <div className="flex items-center gap-2">
                     <span
