@@ -29,7 +29,6 @@ type MappedRow = {
 };
 
 type StatementImportProps = {
-  categories: Option[];
   locale: Locale;
 };
 
@@ -177,13 +176,12 @@ function guessColumn(columns: string[], candidates: string[]) {
   return "";
 }
 
-export default function StatementImport({ categories, locale }: StatementImportProps) {
+export default function StatementImport({ locale }: StatementImportProps) {
   const router = useRouter();
   const [status, setStatus] = useState<"idle" | "parsing">("idle");
   const [rawRows, setRawRows] = useState<RawRow[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  const [defaultCategoryId, setDefaultCategoryId] = useState("");
   const [sourceType, setSourceType] = useState<"" | "account" | "credit_card">("");
 
   const [dateKey, setDateKey] = useState("");
@@ -302,11 +300,6 @@ export default function StatementImport({ categories, locale }: StatementImportP
   function handleContinue() {
     setError(null);
 
-    if (!defaultCategoryId) {
-      setError(t(locale, "statementImport.selectCategory"));
-      return;
-    }
-
     if (!sourceType) {
       setError(t(locale, "statementImport.selectSource"));
       return;
@@ -322,7 +315,6 @@ export default function StatementImport({ categories, locale }: StatementImportP
       return;
     }
 
-    const categoryName = categories.find((category) => category.id === defaultCategoryId)?.name ?? "";
     const sourceLabel =
       sourceType === "credit_card"
         ? t(locale, "statementImport.sourceCard")
@@ -330,8 +322,6 @@ export default function StatementImport({ categories, locale }: StatementImportP
 
     const payload = {
       locale,
-      defaultCategoryId,
-      categoryName,
       sourceType,
       sourceLabel,
       rows: preparedRows,
@@ -383,21 +373,6 @@ export default function StatementImport({ categories, locale }: StatementImportP
 
       {columns.length ? (
         <div className="grid gap-3 text-xs text-slate-300 md:grid-cols-2">
-          <label>
-            {t(locale, "statementImport.defaultCategory")}
-            <select
-              value={defaultCategoryId}
-              onChange={(event) => setDefaultCategoryId(event.target.value)}
-              className="mt-1 w-full rounded-lg border border-slate-800 bg-slate-950/80 px-3 py-2"
-            >
-              <option value=""></option>
-              {categories.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.name}
-                </option>
-              ))}
-            </select>
-          </label>
           <label>
             {t(locale, "statementImport.sourceType")}
             <select

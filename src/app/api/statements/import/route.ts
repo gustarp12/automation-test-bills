@@ -44,10 +44,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: t(locale, "imports.empty") }, { status: 400 });
   }
 
-  if (!defaultCategoryId) {
-    return NextResponse.json({ message: t(locale, "statementImport.selectCategory") }, { status: 400 });
-  }
-
   const expenses: {
     user_id: string;
     amount: number;
@@ -99,7 +95,7 @@ export async function POST(request: Request) {
         amount_dop: row.amount,
         expense_date: row.date,
         notes: row.description,
-        category_id: defaultCategoryId,
+        category_id: defaultCategoryId || null,
         purpose_id: null,
         merchant_id: merchantId || null,
       });

@@ -116,7 +116,7 @@ export default function ExpenseRow({
 
   return (
     <div className="px-4 py-3">
-      <div className="grid grid-cols-14 gap-2 text-sm text-slate-200">
+      <div className="grid grid-cols-16 gap-2 text-sm text-slate-200">
         <span className="col-span-3 text-slate-100">
           {expense.merchants?.name ?? "—"}
         </span>
@@ -134,30 +134,29 @@ export default function ExpenseRow({
         <span className="col-span-1 text-xs text-slate-500">
           {expense.notes ? "•" : ""}
         </span>
-      </div>
-
-      <div className="mt-2 flex flex-wrap items-center justify-end gap-3 text-xs">
-        <button
-          type="button"
-          onClick={() => setIsEditing((prev) => !prev)}
-          className="rounded-full border border-slate-700 px-3 py-1 font-semibold text-slate-200 transition hover:border-slate-500"
-        >
-          {isEditing ? t(locale, "common.cancel") : t(locale, "common.edit")}
-        </button>
-        <form ref={deleteFormRef} action={deleteExpense}>
-          <input type="hidden" name="id" value={expense.id} />
+        <span className="col-span-2 flex items-center justify-end gap-2 text-xs">
           <button
             type="button"
-            onClick={() => {
-              if (window.confirm(t(locale, "expenses.deleteConfirm"))) {
-                deleteFormRef.current?.requestSubmit();
-              }
-            }}
-            className="rounded-full border border-rose-500/70 px-3 py-1 font-semibold text-rose-200 transition hover:border-rose-400"
+            onClick={() => setIsEditing((prev) => !prev)}
+            className="rounded-full border border-slate-700 px-3 py-1 font-semibold text-slate-200 transition hover:border-slate-500"
           >
-            {t(locale, "common.delete")}
+            {isEditing ? t(locale, "common.cancel") : t(locale, "common.edit")}
           </button>
-        </form>
+          <form ref={deleteFormRef} action={deleteExpense}>
+            <input type="hidden" name="id" value={expense.id} />
+            <button
+              type="button"
+              onClick={() => {
+                if (window.confirm(t(locale, "expenses.deleteConfirm"))) {
+                  deleteFormRef.current?.requestSubmit();
+                }
+              }}
+              className="rounded-full border border-rose-500/70 px-3 py-1 font-semibold text-rose-200 transition hover:border-rose-400"
+            >
+              {t(locale, "common.delete")}
+            </button>
+          </form>
+        </span>
       </div>
 
       {isEditing ? (

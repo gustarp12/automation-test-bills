@@ -20,8 +20,6 @@ type ReviewRow = {
 
 type ReviewPayload = {
   locale: Locale;
-  defaultCategoryId: string;
-  categoryName: string;
   sourceType: "account" | "credit_card";
   sourceLabel: string;
   rows: ReviewRow[];
@@ -112,7 +110,6 @@ export default function StatementReviewPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           locale,
-          defaultCategoryId: payload.defaultCategoryId,
           rows: rowsToSend,
         }),
       });
@@ -159,9 +156,6 @@ export default function StatementReviewPage() {
       </div>
 
       <div className="flex flex-wrap items-center gap-3 text-xs text-slate-300">
-        <span className="rounded-full border border-slate-700 px-3 py-1">
-          {payload.categoryName || t(locale, "statementImport.defaultCategory")}
-        </span>
         <span className="rounded-full border border-slate-700 px-3 py-1">
           {payload.sourceLabel || t(locale, "statementImport.sourceLabel")}
         </span>

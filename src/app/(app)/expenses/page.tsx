@@ -215,10 +215,7 @@ export default async function ExpensesPage({
         locale={locale}
       />
 
-      <StatementImport
-        categories={(categories ?? []) as Option[]}
-        locale={locale}
-      />
+      <StatementImport locale={locale} />
 
       <section className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -346,7 +343,7 @@ export default async function ExpensesPage({
         </form>
 
         <div className="overflow-hidden rounded-2xl border border-slate-800">
-          <div className="grid grid-cols-14 gap-2 border-b border-slate-800 bg-slate-950/70 px-4 py-3 text-xs uppercase text-slate-400">
+          <div className="grid grid-cols-16 gap-2 border-b border-slate-800 bg-slate-950/70 px-4 py-3 text-xs uppercase text-slate-400">
             <span className="col-span-3">{t(locale, "common.merchant")}</span>
             <span className="col-span-2">{t(locale, "common.category")}</span>
             <span className="col-span-2">{t(locale, "common.purpose")}</span>
@@ -354,6 +351,7 @@ export default async function ExpensesPage({
             <span className="col-span-2">{t(locale, "common.amount")}</span>
             <span className="col-span-2">{t(locale, "expenses.dopTotal")}</span>
             <span className="col-span-1">{t(locale, "common.notes")}</span>
+            <span className="col-span-2 text-right">{t(locale, "common.actions")}</span>
           </div>
           <div className="divide-y divide-slate-900/60">
             {expenses.length === 0 ? (
