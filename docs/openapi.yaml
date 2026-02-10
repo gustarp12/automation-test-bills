@@ -165,30 +165,43 @@ paths:
           description: Invalid request
         "401":
           description: Unauthorized
-  /api/statements/bhd/import:
+  /api/statements/import:
     post:
-      summary: Import BHD statement XLSX
+      summary: Import bank statements (CSV/XLSX) after client mapping
       requestBody:
         required: true
         content:
-          multipart/form-data:
+          application/json:
             schema:
               type: object
               properties:
-                file:
+                locale:
                   type: string
-                  format: binary
+                  enum: [en, es]
                 defaultCategoryId:
                   type: string
                 defaultPurposeId:
                   type: string
-                locale:
+                merchantId:
                   type: string
-                  enum: [en, es]
+                rows:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      date:
+                        type: string
+                      description:
+                        type: string
+                      amount:
+                        type: number
+                      type:
+                        type: string
+                        enum: [expense, income]
               required:
-                - file
                 - defaultCategoryId
                 - defaultPurposeId
+                - rows
       responses:
         "200":
           description: Import summary
@@ -201,17 +214,6 @@ paths:
                     type: integer
                   insertedIncomes:
                     type: integer
-                  skipped:
-                    type: integer
-                  errors:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        row:
-                          type: integer
-                        message:
-                          type: string
         "400":
           description: Invalid request
         "401":

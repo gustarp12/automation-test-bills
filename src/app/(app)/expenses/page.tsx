@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import ExpenseForm from "./expense-form";
 import CsvImport from "./csv-import";
 import ExpenseRow from "./expense-row";
-import BhdStatementImport from "./bhd-statement-import";
+import StatementImport from "./statement-import";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getLocale } from "@/lib/i18n-server";
 import { t } from "@/lib/i18n";
@@ -35,6 +35,11 @@ type ExpenseRowData = {
   merchants?: { name?: string } | null;
   categories?: { name?: string } | null;
   purposes?: { name?: string } | null;
+};
+
+type MerchantOption = {
+  id: string;
+  name: string;
 };
 
 type SearchParams = {
@@ -215,9 +220,10 @@ export default async function ExpensesPage({
         locale={locale}
       />
 
-      <BhdStatementImport
+      <StatementImport
         categories={(categories ?? []) as Option[]}
         purposes={(purposes ?? []) as Option[]}
+        merchants={(merchants ?? []) as MerchantOption[]}
         locale={locale}
       />
 

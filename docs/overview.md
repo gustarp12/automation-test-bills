@@ -102,7 +102,7 @@ flowchart LR
 3. **Expenses**
    - Add expense
    - CSV import
-   - BHD statement XLSX import
+   - Statement import (CSV/XLSX with mapping)
    - Filter + pagination + export CSV
 4. **Income**
    - Add income
