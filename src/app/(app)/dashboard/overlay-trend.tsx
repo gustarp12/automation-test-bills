@@ -21,7 +21,7 @@ type OverlayTrendProps = {
 export default function OverlayTrend({ months, locale }: OverlayTrendProps) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
-  const chartHeight = 120;
+  const chartHeight = 160;
   const barMinHeight = 6;
 
   const maxValue = useMemo(() => {
@@ -31,22 +31,21 @@ export default function OverlayTrend({ months, locale }: OverlayTrendProps) {
     );
   }, [months]);
 
-  const maxNetMagnitude = useMemo(() => {
-    return Math.max(1, ...months.map((month) => Math.abs(month.net)));
-  }, [months]);
+  const axisMax = maxValue;
+  const zeroY = chartHeight / 2;
 
   const netPoints = useMemo(() => {
     if (months.length <= 1) return "";
     const step = 100 / (months.length - 1);
     return months
       .map((month, index) => {
-        const normalized = (month.net + maxNetMagnitude) / (maxNetMagnitude * 2);
-        const y = chartHeight - normalized * chartHeight;
+        const clamped = Math.max(-axisMax, Math.min(axisMax, month.net));
+        const y = zeroY - (clamped / axisMax) * (chartHeight / 2);
         const x = index * step;
         return `${x},${y}`;
       })
       .join(" ");
-  }, [months, maxNetMagnitude, chartHeight]);
+  }, [months, axisMax, zeroY, chartHeight]);
 
   const activeMonth = activeIndex !== null ? months[activeIndex] : null;
   const activeLeft =
@@ -67,15 +66,15 @@ export default function OverlayTrend({ months, locale }: OverlayTrendProps) {
       <div className="relative">
         <div className="absolute inset-0 flex flex-col justify-between text-[0.65rem] text-slate-600">
           <div className="flex items-center gap-2">
-            <span className="w-8">{formatCurrency(maxValue, "DOP", locale)}</span>
+            <span className="w-8">{formatCurrency(axisMax, "DOP", locale)}</span>
             <span className="h-px flex-1 bg-slate-800" />
           </div>
           <div className="flex items-center gap-2">
-            <span className="w-8">{formatCurrency(maxValue / 2, "DOP", locale)}</span>
+            <span className="w-8">0</span>
             <span className="h-px flex-1 bg-slate-900/60" />
           </div>
           <div className="flex items-center gap-2">
-            <span className="w-8">0</span>
+            <span className="w-8">-{formatCurrency(axisMax, "DOP", locale)}</span>
             <span className="h-px flex-1 bg-slate-900/40" />
           </div>
         </div>
@@ -96,19 +95,21 @@ export default function OverlayTrend({ months, locale }: OverlayTrendProps) {
                 onBlur={() => setActiveIndex(null)}
                 className="group relative flex flex-col items-center gap-2 text-left"
               >
-                <div className="flex w-full items-end gap-1" style={{ height: chartHeight }}>
-                  <div className="flex flex-1 items-end">
-                    <div
-                      className={`w-full rounded-full transition ${isActive ? "bg-emerald-300" : "bg-emerald-400/80"}`}
-                      style={{ height: `${incomeHeight}%` }}
-                    />
-                  </div>
-                  <div className="flex flex-1 items-end">
-                    <div
-                      className={`w-full rounded-full transition ${isActive ? "bg-sky-300" : "bg-sky-400/70"}`}
-                      style={{ height: `${expenseHeight}%` }}
-                    />
-                  </div>
+                <div className="relative w-full" style={{ height: chartHeight }}>
+                  <div
+                    className={`absolute left-0 w-[46%] rounded-full transition ${isActive ? "bg-emerald-300" : "bg-emerald-400/80"}`}
+                    style={{
+                      height: `${(incomeHeight / 100) * (chartHeight / 2)}px`,
+                      bottom: `${zeroY}px`,
+                    }}
+                  />
+                  <div
+                    className={`absolute right-0 w-[46%] rounded-full transition ${isActive ? "bg-sky-300" : "bg-sky-400/70"}`}
+                    style={{
+                      height: `${(expenseHeight / 100) * (chartHeight / 2)}px`,
+                      bottom: `${zeroY}px`,
+                    }}
+                  />
                 </div>
                 <span className="text-xs text-slate-400">{month.label}</span>
               </button>
@@ -121,7 +122,7 @@ export default function OverlayTrend({ months, locale }: OverlayTrendProps) {
             viewBox={`0 0 100 ${chartHeight}`}
             preserveAspectRatio="none"
           >
-            <line x1="0" y1={chartHeight / 2} x2="100" y2={chartHeight / 2} stroke="rgba(148,163,184,0.2)" strokeWidth="1" />
+            <line x1="0" y1={zeroY} x2="100" y2={zeroY} stroke="rgba(148,163,184,0.2)" strokeWidth="1" />
             <polyline
               points={netPoints}
               fill="none"
