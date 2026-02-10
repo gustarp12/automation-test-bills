@@ -52,7 +52,7 @@ export async function POST(request: Request) {
     amount_dop: number;
     expense_date: string;
     notes: string | null;
-    category_id: string;
+    category_id: string | null;
     purpose_id: string | null;
     merchant_id: string | null;
   }[] = [];
