@@ -266,7 +266,7 @@ export default function StatementReviewPage() {
               {t(locale, "nav.expenses")}
             </Link>
             <Link
-              href="/income"
+              href="/incomes"
               className="rounded-xl border border-slate-700 px-3 py-2 text-xs font-semibold text-slate-200 transition hover:border-slate-500"
             >
               {t(locale, "nav.income")}
