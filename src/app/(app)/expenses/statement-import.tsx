@@ -1,12 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
 
 import { t, type Locale } from "@/lib/i18n";
-
-const MAX_PREVIEW_ROWS = 50;
 
 const LOCAL_STORAGE_PREFIX = "statementMapping";
 
@@ -20,7 +19,11 @@ type RawRow = Record<string, unknown>;
 type MappedRow = {
   index: number;
   date: string;
-  description: string;
+  reference: string;
+  detail: string;
+  debit: number;
+  credit: number;
+  balance: number;
   amount: number;
   type: "expense" | "income";
 };
@@ -37,10 +40,28 @@ function normalizeHeader(value: unknown) {
   return String(value).trim();
 }
 
+function normalizeKey(value: unknown) {
+  if (value === null || value === undefined) return "";
+  return String(value)
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
 function parseNumber(value: unknown) {
   if (value === null || value === undefined || value === "") return 0;
   if (typeof value === "number") return value;
-  const cleaned = String(value).replace(/[^0-9.-]/g, "");
+  const raw = String(value).replace(/\s/g, "");
+  const normalized =
+    raw.includes(",") && !raw.includes(".")
+      ? raw.replace(/,/g, ".")
+      : raw.includes(",") && raw.includes(".")
+        ? raw.replace(/,/g, "")
+        : raw;
+  const cleaned = normalized.replace(/[^0-9.-]/g, "");
   const parsed = Number(cleaned);
   return Number.isNaN(parsed) ? 0 : parsed;
 }
@@ -74,19 +95,32 @@ function parseDate(value: unknown) {
 }
 
 function detectHeaderRow(rows: unknown[][]) {
+  let bestIndex = 0;
+  let bestScore = -1;
   for (let i = 0; i < rows.length; i += 1) {
     const row = rows[i];
-    const joined = row
-      .map((cell) => String(cell ?? "").trim())
-      .filter(Boolean)
-      .join(" ")
-      .toLowerCase();
+    const joined = row.map((cell) => normalizeKey(cell)).filter(Boolean).join(" ");
+    if (!joined) continue;
 
-    if (joined.includes("fecha") && (joined.includes("debito") || joined.includes("credito") || joined.includes("monto") || joined.includes("amount"))) {
-      return i;
+    const hasFecha = joined.includes("fecha") || joined.includes("date");
+    const hasDebito = joined.includes("debito") || joined.includes("debit");
+    const hasCredito = joined.includes("credito") || joined.includes("credit");
+    const hasDetalle =
+      joined.includes("detalle") ||
+      joined.includes("detail") ||
+      joined.includes("descripcion") ||
+      joined.includes("description");
+    const hasReferencia = joined.includes("referencia") || joined.includes("reference");
+    const hasBalance = joined.includes("balance") || joined.includes("saldo");
+
+    const score = [hasFecha, hasDebito, hasCredito, hasDetalle, hasReferencia, hasBalance].filter(Boolean)
+      .length;
+    if (hasFecha && (hasDebito || hasCredito) && score > bestScore) {
+      bestScore = score;
+      bestIndex = i;
     }
   }
-  return 0;
+  return bestScore >= 2 ? bestIndex : 0;
 }
 
 function rowsFromXlsx(buffer: ArrayBuffer) {
@@ -106,7 +140,12 @@ function rowsFromXlsx(buffer: ArrayBuffer) {
         if (!header) return;
         record[header] = row[idx];
       });
-      rows.push(record);
+      const hasValues = Object.values(record).some(
+        (value) => value !== null && value !== undefined && String(value).trim() !== ""
+      );
+      if (hasValues) {
+        rows.push(record);
+      }
     }
   });
 
@@ -121,30 +160,46 @@ function rowsFromCsv(text: string) {
   return parsed.data ?? [];
 }
 
+function guessColumn(columns: string[], candidates: string[]) {
+  const normalized = columns.map((col) => ({
+    col,
+    normalized: normalizeKey(col),
+  }));
+
+  for (const candidate of candidates) {
+    const match = normalized.find((entry) => entry.normalized === candidate);
+    if (match) return match.col;
+  }
+
+  for (const candidate of candidates) {
+    const match = normalized.find((entry) => entry.normalized.includes(candidate));
+    if (match) return match.col;
+  }
+
+  return "";
+}
+
 export default function StatementImport({
   categories,
   purposes,
   merchants,
   locale,
 }: StatementImportProps) {
-  const [status, setStatus] = useState<"idle" | "parsing" | "uploading">("idle");
+  const router = useRouter();
+  const [status, setStatus] = useState<"idle" | "parsing">("idle");
   const [rawRows, setRawRows] = useState<RawRow[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<{ insertedExpenses: number; insertedIncomes: number } | null>(null);
 
   const [merchantId, setMerchantId] = useState("");
   const [defaultCategoryId, setDefaultCategoryId] = useState("");
   const [defaultPurposeId, setDefaultPurposeId] = useState("");
 
   const [dateKey, setDateKey] = useState("");
-  const [descriptionKey, setDescriptionKey] = useState("");
+  const [referenceKey, setReferenceKey] = useState("");
+  const [detailKey, setDetailKey] = useState("");
   const [debitKey, setDebitKey] = useState("");
   const [creditKey, setCreditKey] = useState("");
-  const [amountKey, setAmountKey] = useState("");
-  const [typeKey, setTypeKey] = useState("");
-
-  const [overrides, setOverrides] = useState<Record<number, "expense" | "income">>({});
-  const [excluded, setExcluded] = useState<Record<number, boolean>>({});
+  const [balanceKey, setBalanceKey] = useState("");
 
   const columns = useMemo(() => {
     const keys = new Set<string>();
@@ -155,73 +210,84 @@ export default function StatementImport({
   }, [rawRows]);
 
   useEffect(() => {
+    if (!columns.length) return;
+    setDateKey((prev) => prev || guessColumn(columns, ["fecha", "date"]));
+    setReferenceKey((prev) => prev || guessColumn(columns, ["referencia", "reference", "ref"]));
+    setDetailKey((prev) => prev || guessColumn(columns, ["detalle", "detail", "descripcion", "description"]));
+    setDebitKey((prev) => prev || guessColumn(columns, ["debito", "debit"]));
+    setCreditKey((prev) => prev || guessColumn(columns, ["credito", "credit"]));
+    setBalanceKey((prev) => prev || guessColumn(columns, ["balance", "saldo"]));
+  }, [columns]);
+
+  useEffect(() => {
     if (!merchantId) return;
     const stored = localStorage.getItem(`${LOCAL_STORAGE_PREFIX}:${merchantId}`);
     if (!stored) return;
     try {
       const mapping = JSON.parse(stored) as {
         dateKey?: string;
-        descriptionKey?: string;
+        referenceKey?: string;
+        detailKey?: string;
         debitKey?: string;
         creditKey?: string;
-        amountKey?: string;
-        typeKey?: string;
+        balanceKey?: string;
       };
       setDateKey(mapping.dateKey ?? "");
-      setDescriptionKey(mapping.descriptionKey ?? "");
+      setReferenceKey(mapping.referenceKey ?? "");
+      setDetailKey(mapping.detailKey ?? "");
       setDebitKey(mapping.debitKey ?? "");
       setCreditKey(mapping.creditKey ?? "");
-      setAmountKey(mapping.amountKey ?? "");
-      setTypeKey(mapping.typeKey ?? "");
+      setBalanceKey(mapping.balanceKey ?? "");
     } catch {
       // ignore
     }
   }, [merchantId]);
 
-  const previewRows = useMemo(() => {
+  const preparedRows = useMemo(() => {
     if (!rawRows.length) return [] as MappedRow[];
-    return rawRows.slice(0, MAX_PREVIEW_ROWS).map((row, index) => {
-      const dateValue = dateKey ? parseDate(row[dateKey]) : "";
-      const descriptionValue = descriptionKey ? String(row[descriptionKey] ?? "").trim() : "";
-      const debit = debitKey ? parseNumber(row[debitKey]) : 0;
-      const credit = creditKey ? parseNumber(row[creditKey]) : 0;
-      let amount = 0;
-      let type: "expense" | "income" = "expense";
+    return rawRows
+      .map((row, index) => {
+        const dateValue = dateKey ? parseDate(row[dateKey]) : "";
+        const referenceValue = referenceKey ? String(row[referenceKey] ?? "").trim() : "";
+        const detailValue = detailKey ? String(row[detailKey] ?? "").trim() : "";
+        const debit = debitKey ? parseNumber(row[debitKey]) : 0;
+        const credit = creditKey ? parseNumber(row[creditKey]) : 0;
+        const balance = balanceKey ? parseNumber(row[balanceKey]) : 0;
+        let amount = 0;
+        let type: "expense" | "income" = "expense";
 
-      if (debit || credit) {
-        if (debit) {
-          amount = debit;
-          type = "expense";
-        } else {
-          amount = credit;
-          type = "income";
+        if (debit || credit) {
+          if (debit) {
+            amount = debit;
+            type = "expense";
+          } else {
+            amount = credit;
+            type = "income";
+          }
         }
-      } else if (amountKey) {
-        amount = Math.abs(parseNumber(row[amountKey]));
-        if (typeKey) {
-          const typeVal = String(row[typeKey] ?? "").toLowerCase();
-          type = typeVal.includes("credit") || typeVal.includes("cr") ? "income" : "expense";
+
+        if (!dateValue || !amount || (!detailValue && !referenceValue)) {
+          return null;
         }
-      }
 
-      const overrideType = overrides[index];
-
-      return {
-        index,
-        date: dateValue,
-        description: descriptionValue,
-        amount,
-        type: overrideType ?? type,
-      };
-    });
-  }, [rawRows, dateKey, descriptionKey, debitKey, creditKey, amountKey, typeKey, overrides]);
+        return {
+          index,
+          date: dateValue,
+          reference: referenceValue,
+          detail: detailValue,
+          debit,
+          credit,
+          balance,
+          amount,
+          type,
+        };
+      })
+      .filter(Boolean) as MappedRow[];
+  }, [rawRows, dateKey, referenceKey, detailKey, debitKey, creditKey, balanceKey]);
 
   async function handleFile(file: File) {
     setError(null);
-    setResult(null);
     setRawRows([]);
-    setOverrides({});
-    setExcluded({});
     setStatus("parsing");
 
     try {
@@ -241,95 +307,55 @@ export default function StatementImport({
     }
   }
 
-  async function handleImport() {
+  function handleContinue() {
     setError(null);
-    setResult(null);
-    setStatus("uploading");
 
-    try {
-      if (!defaultCategoryId || !defaultPurposeId) {
-        throw new Error(t(locale, "statementImport.selectDefaults"));
-      }
-      if (!dateKey || !descriptionKey) {
-        throw new Error(t(locale, "statementImport.mappingRequired"));
-      }
-
-      const rowsToSend = rawRows
-        .map((row, index) => {
-          if (excluded[index]) return null;
-          const date = dateKey ? parseDate(row[dateKey]) : "";
-          const description = descriptionKey ? String(row[descriptionKey] ?? "").trim() : "";
-          const debit = debitKey ? parseNumber(row[debitKey]) : 0;
-          const credit = creditKey ? parseNumber(row[creditKey]) : 0;
-
-          let amount = 0;
-          let type: "expense" | "income" = "expense";
-          if (debit || credit) {
-            if (debit) {
-              amount = debit;
-              type = "expense";
-            } else {
-              amount = credit;
-              type = "income";
-            }
-          } else if (amountKey) {
-            amount = Math.abs(parseNumber(row[amountKey]));
-            if (typeKey) {
-              const typeVal = String(row[typeKey] ?? "").toLowerCase();
-              type = typeVal.includes("credit") || typeVal.includes("cr") ? "income" : "expense";
-            }
-          }
-
-          if (!date || !description || !amount) {
-            return null;
-          }
-
-          const overrideType = overrides[index];
-
-          return {
-            date,
-            description,
-            amount,
-            type: overrideType ?? type,
-          };
-        })
-        .filter(Boolean);
-
-      const response = await fetch("/api/statements/import", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          locale,
-          defaultCategoryId,
-          defaultPurposeId,
-          merchantId,
-          rows: rowsToSend,
-        }),
-      });
-
-      const data = (await response.json()) as {
-        insertedExpenses: number;
-        insertedIncomes: number;
-        message?: string;
-      };
-
-      if (!response.ok) {
-        throw new Error(data.message ?? t(locale, "imports.uploadFailed"));
-      }
-
-      if (merchantId) {
-        localStorage.setItem(
-          `${LOCAL_STORAGE_PREFIX}:${merchantId}`,
-          JSON.stringify({ dateKey, descriptionKey, debitKey, creditKey, amountKey, typeKey })
-        );
-      }
-
-      setResult({ insertedExpenses: data.insertedExpenses, insertedIncomes: data.insertedIncomes });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t(locale, "imports.uploadFailed"));
-    } finally {
-      setStatus("idle");
+    if (!defaultCategoryId || !defaultPurposeId) {
+      setError(t(locale, "statementImport.selectDefaults"));
+      return;
     }
+
+    if (!dateKey || !referenceKey || !detailKey || !debitKey || !creditKey || !balanceKey) {
+      setError(t(locale, "statementImport.mappingRequired"));
+      return;
+    }
+
+    if (!preparedRows.length) {
+      setError(t(locale, "statementImport.noRows"));
+      return;
+    }
+
+    if (merchantId) {
+      localStorage.setItem(
+        `${LOCAL_STORAGE_PREFIX}:${merchantId}`,
+        JSON.stringify({
+          dateKey,
+          referenceKey,
+          detailKey,
+          debitKey,
+          creditKey,
+          balanceKey,
+        })
+      );
+    }
+
+    const merchantName = merchants.find((merchant) => merchant.id === merchantId)?.name ?? "";
+    const categoryName = categories.find((category) => category.id === defaultCategoryId)?.name ?? "";
+    const purposeName = purposes.find((purpose) => purpose.id === defaultPurposeId)?.name ?? "";
+
+    const payload = {
+      locale,
+      defaultCategoryId,
+      defaultPurposeId,
+      merchantId,
+      merchantName,
+      categoryName,
+      purposeName,
+      rows: preparedRows,
+    };
+
+    localStorage.setItem("statementImportReview", JSON.stringify(payload));
+    router.push("/expenses/statement-review");
   }
 
   return (
@@ -423,10 +449,25 @@ export default function StatementImport({
             </select>
           </label>
           <label>
-            {t(locale, "statementImport.descriptionColumn")}
+            {t(locale, "statementImport.referenceColumn")}
             <select
-              value={descriptionKey}
-              onChange={(event) => setDescriptionKey(event.target.value)}
+              value={referenceKey}
+              onChange={(event) => setReferenceKey(event.target.value)}
+              className="mt-1 w-full rounded-lg border border-slate-800 bg-slate-950/80 px-3 py-2"
+            >
+              <option value=""></option>
+              {columns.map((col) => (
+                <option key={col} value={col}>
+                  {col}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            {t(locale, "statementImport.detailColumn")}
+            <select
+              value={detailKey}
+              onChange={(event) => setDetailKey(event.target.value)}
               className="mt-1 w-full rounded-lg border border-slate-800 bg-slate-950/80 px-3 py-2"
             >
               <option value=""></option>
@@ -468,25 +509,10 @@ export default function StatementImport({
             </select>
           </label>
           <label>
-            {t(locale, "statementImport.amountColumn")}
+            {t(locale, "statementImport.balanceColumn")}
             <select
-              value={amountKey}
-              onChange={(event) => setAmountKey(event.target.value)}
-              className="mt-1 w-full rounded-lg border border-slate-800 bg-slate-950/80 px-3 py-2"
-            >
-              <option value=""></option>
-              {columns.map((col) => (
-                <option key={col} value={col}>
-                  {col}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            {t(locale, "statementImport.typeColumn")}
-            <select
-              value={typeKey}
-              onChange={(event) => setTypeKey(event.target.value)}
+              value={balanceKey}
+              onChange={(event) => setBalanceKey(event.target.value)}
               className="mt-1 w-full rounded-lg border border-slate-800 bg-slate-950/80 px-3 py-2"
             >
               <option value=""></option>
@@ -500,68 +526,23 @@ export default function StatementImport({
         </div>
       ) : null}
 
-      {previewRows.length ? (
-        <div className="space-y-2">
-          <div className="overflow-hidden rounded-xl border border-slate-800">
-            <div className="grid grid-cols-12 gap-2 border-b border-slate-800 bg-slate-950/70 px-4 py-2 text-xs uppercase text-slate-400">
-              <span className="col-span-2">{t(locale, "common.date")}</span>
-              <span className="col-span-5">{t(locale, "statementImport.description")}</span>
-              <span className="col-span-2">{t(locale, "common.amount")}</span>
-              <span className="col-span-2">{t(locale, "statementImport.type")}</span>
-              <span className="col-span-1">{t(locale, "statementImport.include")}</span>
-            </div>
-            {previewRows.map((row) => (
-              <div key={row.index} className="grid grid-cols-12 gap-2 px-4 py-2 text-xs text-slate-300">
-                <span className="col-span-2">{row.date || "-"}</span>
-                <span className="col-span-5 truncate">{row.description}</span>
-                <span className="col-span-2">{row.amount ? row.amount.toFixed(2) : "-"}</span>
-                <span className="col-span-2">
-                  <select
-                    value={overrides[row.index] ?? row.type}
-                    onChange={(event) =>
-                      setOverrides((prev) => ({
-                        ...prev,
-                        [row.index]: event.target.value as "expense" | "income",
-                      }))
-                    }
-                    className="w-full rounded-md border border-slate-800 bg-slate-950/80 px-2 py-1"
-                  >
-                    <option value="expense">{t(locale, "statementImport.expenses")}</option>
-                    <option value="income">{t(locale, "statementImport.incomes")}</option>
-                  </select>
-                </span>
-                <span className="col-span-1">
-                  <input
-                    type="checkbox"
-                    checked={!excluded[row.index]}
-                    onChange={(event) =>
-                      setExcluded((prev) => ({ ...prev, [row.index]: !event.target.checked }))
-                    }
-                  />
-                </span>
-              </div>
-            ))}
-          </div>
+      {preparedRows.length ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-950/70 px-4 py-3 text-xs text-slate-300">
+          <span>
+            {t(locale, "statementImport.rowsReady")} {preparedRows.length}
+          </span>
           <button
             type="button"
-            onClick={handleImport}
-            disabled={status === "uploading"}
-            className="rounded-xl bg-emerald-400 px-4 py-2 text-xs font-semibold text-slate-950 transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-70"
+            onClick={handleContinue}
+            className="rounded-xl bg-emerald-400 px-4 py-2 text-xs font-semibold text-slate-950 transition hover:bg-emerald-300"
           >
-            {status === "uploading" ? t(locale, "statementImport.uploading") : t(locale, "statementImport.import")}
+            {t(locale, "statementImport.review")}
           </button>
         </div>
       ) : null}
 
       {error ? <p className="text-xs text-rose-300">{error}</p> : null}
 
-      {result ? (
-        <p className="text-xs text-slate-300">
-          {t(locale, "statementImport.result")} {result.insertedExpenses} {t(locale, "statementImport.expenses")}
-          {" · "}
-          {result.insertedIncomes} {t(locale, "statementImport.incomes")}
-        </p>
-      ) : null}
     </section>
   );
 }
