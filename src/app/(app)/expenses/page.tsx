@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import ExpenseForm from "./expense-form";
 import CsvImport from "./csv-import";
 import ExpenseRow from "./expense-row";
+import BhdStatementImport from "./bhd-statement-import";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getLocale } from "@/lib/i18n-server";
 import { t } from "@/lib/i18n";
@@ -211,6 +212,12 @@ export default async function ExpensesPage({
         purposes={(purposes ?? []) as Option[]}
         merchants={(merchants ?? []) as Option[]}
         currencies={(activeCurrencies ?? []) as CurrencyOption[]}
+        locale={locale}
+      />
+
+      <BhdStatementImport
+        categories={(categories ?? []) as Option[]}
+        purposes={(purposes ?? []) as Option[]}
         locale={locale}
       />
 

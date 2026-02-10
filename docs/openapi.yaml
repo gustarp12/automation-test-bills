@@ -165,3 +165,54 @@ paths:
           description: Invalid request
         "401":
           description: Unauthorized
+  /api/statements/bhd/import:
+    post:
+      summary: Import BHD statement XLSX
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                defaultCategoryId:
+                  type: string
+                defaultPurposeId:
+                  type: string
+                locale:
+                  type: string
+                  enum: [en, es]
+              required:
+                - file
+                - defaultCategoryId
+                - defaultPurposeId
+      responses:
+        "200":
+          description: Import summary
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  insertedExpenses:
+                    type: integer
+                  insertedIncomes:
+                    type: integer
+                  skipped:
+                    type: integer
+                  errors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        row:
+                          type: integer
+                        message:
+                          type: string
+        "400":
+          description: Invalid request
+        "401":
+          description: Unauthorized
