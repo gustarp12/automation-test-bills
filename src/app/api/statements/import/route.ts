@@ -25,7 +25,6 @@ export async function POST(request: Request) {
     | {
         locale?: string;
         defaultCategoryId?: string;
-        defaultPurposeId?: string;
         merchantId?: string;
         rows?: {
           date: string;
@@ -39,15 +38,14 @@ export async function POST(request: Request) {
   const locale = normalizeLocale(body?.locale ?? "");
   const rows = body?.rows ?? [];
   const defaultCategoryId = String(body?.defaultCategoryId ?? "").trim();
-  const defaultPurposeId = String(body?.defaultPurposeId ?? "").trim();
   const merchantId = String(body?.merchantId ?? "").trim();
 
   if (!Array.isArray(rows) || rows.length === 0) {
     return NextResponse.json({ message: t(locale, "imports.empty") }, { status: 400 });
   }
 
-  if (!defaultCategoryId || !defaultPurposeId) {
-    return NextResponse.json({ message: t(locale, "statementImport.selectDefaults") }, { status: 400 });
+  if (!defaultCategoryId) {
+    return NextResponse.json({ message: t(locale, "statementImport.selectCategory") }, { status: 400 });
   }
 
   const expenses: {
@@ -102,7 +100,7 @@ export async function POST(request: Request) {
         expense_date: row.date,
         notes: row.description,
         category_id: defaultCategoryId,
-        purpose_id: defaultPurposeId,
+        purpose_id: null,
         merchant_id: merchantId || null,
       });
     }

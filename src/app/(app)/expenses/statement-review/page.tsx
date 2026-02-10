@@ -21,11 +21,9 @@ type ReviewRow = {
 type ReviewPayload = {
   locale: Locale;
   defaultCategoryId: string;
-  defaultPurposeId: string;
-  merchantId: string;
-  merchantName: string;
   categoryName: string;
-  purposeName: string;
+  sourceType: "account" | "credit_card";
+  sourceLabel: string;
   rows: ReviewRow[];
 };
 
@@ -87,6 +85,9 @@ export default function StatementReviewPage() {
     if (row.reference) {
       parts.push(`${t(locale, "statementImport.reference")}: ${row.reference}`);
     }
+    if (payload?.sourceLabel) {
+      parts.push(`${t(locale, "statementImport.sourceLabel")}: ${payload.sourceLabel}`);
+    }
     return parts.filter(Boolean).join(" · ");
   }
 
@@ -112,8 +113,6 @@ export default function StatementReviewPage() {
         body: JSON.stringify({
           locale,
           defaultCategoryId: payload.defaultCategoryId,
-          defaultPurposeId: payload.defaultPurposeId,
-          merchantId: payload.merchantId,
           rows: rowsToSend,
         }),
       });
@@ -164,11 +163,8 @@ export default function StatementReviewPage() {
           {payload.categoryName || t(locale, "statementImport.defaultCategory")}
         </span>
         <span className="rounded-full border border-slate-700 px-3 py-1">
-          {payload.purposeName || t(locale, "statementImport.defaultPurpose")}
+          {payload.sourceLabel || t(locale, "statementImport.sourceLabel")}
         </span>
-        {payload.merchantName ? (
-          <span className="rounded-full border border-slate-700 px-3 py-1">{payload.merchantName}</span>
-        ) : null}
       </div>
 
       <div className="grid gap-3 text-xs text-slate-300 md:grid-cols-2">

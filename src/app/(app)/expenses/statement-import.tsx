@@ -30,8 +30,6 @@ type MappedRow = {
 
 type StatementImportProps = {
   categories: Option[];
-  purposes: Option[];
-  merchants: Option[];
   locale: Locale;
 };
 
@@ -179,20 +177,14 @@ function guessColumn(columns: string[], candidates: string[]) {
   return "";
 }
 
-export default function StatementImport({
-  categories,
-  purposes,
-  merchants,
-  locale,
-}: StatementImportProps) {
+export default function StatementImport({ categories, locale }: StatementImportProps) {
   const router = useRouter();
   const [status, setStatus] = useState<"idle" | "parsing">("idle");
   const [rawRows, setRawRows] = useState<RawRow[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  const [merchantId, setMerchantId] = useState("");
   const [defaultCategoryId, setDefaultCategoryId] = useState("");
-  const [defaultPurposeId, setDefaultPurposeId] = useState("");
+  const [sourceType, setSourceType] = useState<"" | "account" | "credit_card">("");
 
   const [dateKey, setDateKey] = useState("");
   const [referenceKey, setReferenceKey] = useState("");
@@ -200,6 +192,7 @@ export default function StatementImport({
   const [debitKey, setDebitKey] = useState("");
   const [creditKey, setCreditKey] = useState("");
   const [balanceKey, setBalanceKey] = useState("");
+  const [showMapping, setShowMapping] = useState(false);
 
   const columns = useMemo(() => {
     const keys = new Set<string>();
@@ -220,8 +213,7 @@ export default function StatementImport({
   }, [columns]);
 
   useEffect(() => {
-    if (!merchantId) return;
-    const stored = localStorage.getItem(`${LOCAL_STORAGE_PREFIX}:${merchantId}`);
+    const stored = localStorage.getItem(`${LOCAL_STORAGE_PREFIX}:default`);
     if (!stored) return;
     try {
       const mapping = JSON.parse(stored) as {
@@ -241,7 +233,7 @@ export default function StatementImport({
     } catch {
       // ignore
     }
-  }, [merchantId]);
+  }, []);
 
   const preparedRows = useMemo(() => {
     if (!rawRows.length) return [] as MappedRow[];
@@ -310,8 +302,13 @@ export default function StatementImport({
   function handleContinue() {
     setError(null);
 
-    if (!defaultCategoryId || !defaultPurposeId) {
-      setError(t(locale, "statementImport.selectDefaults"));
+    if (!defaultCategoryId) {
+      setError(t(locale, "statementImport.selectCategory"));
+      return;
+    }
+
+    if (!sourceType) {
+      setError(t(locale, "statementImport.selectSource"));
       return;
     }
 
@@ -325,34 +322,32 @@ export default function StatementImport({
       return;
     }
 
-    if (merchantId) {
-      localStorage.setItem(
-        `${LOCAL_STORAGE_PREFIX}:${merchantId}`,
-        JSON.stringify({
-          dateKey,
-          referenceKey,
-          detailKey,
-          debitKey,
-          creditKey,
-          balanceKey,
-        })
-      );
-    }
-
-    const merchantName = merchants.find((merchant) => merchant.id === merchantId)?.name ?? "";
     const categoryName = categories.find((category) => category.id === defaultCategoryId)?.name ?? "";
-    const purposeName = purposes.find((purpose) => purpose.id === defaultPurposeId)?.name ?? "";
+    const sourceLabel =
+      sourceType === "credit_card"
+        ? t(locale, "statementImport.sourceCard")
+        : t(locale, "statementImport.sourceAccount");
 
     const payload = {
       locale,
       defaultCategoryId,
-      defaultPurposeId,
-      merchantId,
-      merchantName,
       categoryName,
-      purposeName,
+      sourceType,
+      sourceLabel,
       rows: preparedRows,
     };
+
+    localStorage.setItem(
+      `${LOCAL_STORAGE_PREFIX}:default`,
+      JSON.stringify({
+        dateKey,
+        referenceKey,
+        detailKey,
+        debitKey,
+        creditKey,
+        balanceKey,
+      })
+    );
 
     localStorage.setItem("statementImportReview", JSON.stringify(payload));
     router.push("/expenses/statement-review");
@@ -389,21 +384,6 @@ export default function StatementImport({
       {columns.length ? (
         <div className="grid gap-3 text-xs text-slate-300 md:grid-cols-2">
           <label>
-            {t(locale, "statementImport.merchant")}
-            <select
-              value={merchantId}
-              onChange={(event) => setMerchantId(event.target.value)}
-              className="mt-1 w-full rounded-lg border border-slate-800 bg-slate-950/80 px-3 py-2"
-            >
-              <option value=""></option>
-              {merchants.map((merchant) => (
-                <option key={merchant.id} value={merchant.id}>
-                  {merchant.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
             {t(locale, "statementImport.defaultCategory")}
             <select
               value={defaultCategoryId}
@@ -419,110 +399,133 @@ export default function StatementImport({
             </select>
           </label>
           <label>
-            {t(locale, "statementImport.defaultPurpose")}
+            {t(locale, "statementImport.sourceType")}
             <select
-              value={defaultPurposeId}
-              onChange={(event) => setDefaultPurposeId(event.target.value)}
+              value={sourceType}
+              onChange={(event) => setSourceType(event.target.value as "account" | "credit_card" | "")}
               className="mt-1 w-full rounded-lg border border-slate-800 bg-slate-950/80 px-3 py-2"
             >
               <option value=""></option>
-              {purposes.map((purpose) => (
-                <option key={purpose.id} value={purpose.id}>
-                  {purpose.name}
-                </option>
-              ))}
+              <option value="account">{t(locale, "statementImport.sourceAccount")}</option>
+              <option value="credit_card">{t(locale, "statementImport.sourceCard")}</option>
             </select>
           </label>
-          <label>
-            {t(locale, "statementImport.dateColumn")}
-            <select
-              value={dateKey}
-              onChange={(event) => setDateKey(event.target.value)}
-              className="mt-1 w-full rounded-lg border border-slate-800 bg-slate-950/80 px-3 py-2"
-            >
-              <option value=""></option>
-              {columns.map((col) => (
-                <option key={col} value={col}>
-                  {col}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            {t(locale, "statementImport.referenceColumn")}
-            <select
-              value={referenceKey}
-              onChange={(event) => setReferenceKey(event.target.value)}
-              className="mt-1 w-full rounded-lg border border-slate-800 bg-slate-950/80 px-3 py-2"
-            >
-              <option value=""></option>
-              {columns.map((col) => (
-                <option key={col} value={col}>
-                  {col}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            {t(locale, "statementImport.detailColumn")}
-            <select
-              value={detailKey}
-              onChange={(event) => setDetailKey(event.target.value)}
-              className="mt-1 w-full rounded-lg border border-slate-800 bg-slate-950/80 px-3 py-2"
-            >
-              <option value=""></option>
-              {columns.map((col) => (
-                <option key={col} value={col}>
-                  {col}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            {t(locale, "statementImport.debitColumn")}
-            <select
-              value={debitKey}
-              onChange={(event) => setDebitKey(event.target.value)}
-              className="mt-1 w-full rounded-lg border border-slate-800 bg-slate-950/80 px-3 py-2"
-            >
-              <option value=""></option>
-              {columns.map((col) => (
-                <option key={col} value={col}>
-                  {col}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            {t(locale, "statementImport.creditColumn")}
-            <select
-              value={creditKey}
-              onChange={(event) => setCreditKey(event.target.value)}
-              className="mt-1 w-full rounded-lg border border-slate-800 bg-slate-950/80 px-3 py-2"
-            >
-              <option value=""></option>
-              {columns.map((col) => (
-                <option key={col} value={col}>
-                  {col}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            {t(locale, "statementImport.balanceColumn")}
-            <select
-              value={balanceKey}
-              onChange={(event) => setBalanceKey(event.target.value)}
-              className="mt-1 w-full rounded-lg border border-slate-800 bg-slate-950/80 px-3 py-2"
-            >
-              <option value=""></option>
-              {columns.map((col) => (
-                <option key={col} value={col}>
-                  {col}
-                </option>
-              ))}
-            </select>
-          </label>
+          <div className="md:col-span-2 rounded-xl border border-slate-800/80 bg-slate-950/70 px-4 py-3 text-xs text-slate-400">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <span>{t(locale, "statementImport.mappingDetected")}</span>
+              <button
+                type="button"
+                onClick={() => setShowMapping((prev) => !prev)}
+                className="rounded-full border border-slate-700 px-3 py-1 text-[0.65rem] font-semibold text-slate-200 transition hover:border-slate-500"
+              >
+                {showMapping ? t(locale, "statementImport.hideMapping") : t(locale, "statementImport.editMapping")}
+              </button>
+            </div>
+            <p className="mt-2 text-[0.7rem] text-slate-500">
+              {t(locale, "statementImport.mappingSummary")
+                .replace("{date}", dateKey || "—")
+                .replace("{reference}", referenceKey || "—")
+                .replace("{detail}", detailKey || "—")
+                .replace("{debit}", debitKey || "—")
+                .replace("{credit}", creditKey || "—")
+                .replace("{balance}", balanceKey || "—")}
+            </p>
+          </div>
+
+          {showMapping ? (
+            <>
+              <label>
+                {t(locale, "statementImport.dateColumn")}
+                <select
+                  value={dateKey}
+                  onChange={(event) => setDateKey(event.target.value)}
+                  className="mt-1 w-full rounded-lg border border-slate-800 bg-slate-950/80 px-3 py-2"
+                >
+                  <option value=""></option>
+                  {columns.map((col) => (
+                    <option key={col} value={col}>
+                      {col}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                {t(locale, "statementImport.referenceColumn")}
+                <select
+                  value={referenceKey}
+                  onChange={(event) => setReferenceKey(event.target.value)}
+                  className="mt-1 w-full rounded-lg border border-slate-800 bg-slate-950/80 px-3 py-2"
+                >
+                  <option value=""></option>
+                  {columns.map((col) => (
+                    <option key={col} value={col}>
+                      {col}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                {t(locale, "statementImport.detailColumn")}
+                <select
+                  value={detailKey}
+                  onChange={(event) => setDetailKey(event.target.value)}
+                  className="mt-1 w-full rounded-lg border border-slate-800 bg-slate-950/80 px-3 py-2"
+                >
+                  <option value=""></option>
+                  {columns.map((col) => (
+                    <option key={col} value={col}>
+                      {col}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                {t(locale, "statementImport.debitColumn")}
+                <select
+                  value={debitKey}
+                  onChange={(event) => setDebitKey(event.target.value)}
+                  className="mt-1 w-full rounded-lg border border-slate-800 bg-slate-950/80 px-3 py-2"
+                >
+                  <option value=""></option>
+                  {columns.map((col) => (
+                    <option key={col} value={col}>
+                      {col}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                {t(locale, "statementImport.creditColumn")}
+                <select
+                  value={creditKey}
+                  onChange={(event) => setCreditKey(event.target.value)}
+                  className="mt-1 w-full rounded-lg border border-slate-800 bg-slate-950/80 px-3 py-2"
+                >
+                  <option value=""></option>
+                  {columns.map((col) => (
+                    <option key={col} value={col}>
+                      {col}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                {t(locale, "statementImport.balanceColumn")}
+                <select
+                  value={balanceKey}
+                  onChange={(event) => setBalanceKey(event.target.value)}
+                  className="mt-1 w-full rounded-lg border border-slate-800 bg-slate-950/80 px-3 py-2"
+                >
+                  <option value=""></option>
+                  {columns.map((col) => (
+                    <option key={col} value={col}>
+                      {col}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </>
+          ) : null}
         </div>
       ) : null}
 

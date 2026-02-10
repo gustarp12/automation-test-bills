@@ -37,11 +37,6 @@ type ExpenseRowData = {
   purposes?: { name?: string } | null;
 };
 
-type MerchantOption = {
-  id: string;
-  name: string;
-};
-
 type SearchParams = {
   from?: string;
   to?: string;
@@ -222,8 +217,6 @@ export default async function ExpensesPage({
 
       <StatementImport
         categories={(categories ?? []) as Option[]}
-        purposes={(purposes ?? []) as Option[]}
-        merchants={(merchants ?? []) as MerchantOption[]}
         locale={locale}
       />
 
@@ -353,11 +346,10 @@ export default async function ExpensesPage({
         </form>
 
         <div className="overflow-hidden rounded-2xl border border-slate-800">
-          <div className="grid grid-cols-12 gap-2 border-b border-slate-800 bg-slate-950/70 px-4 py-3 text-xs uppercase text-slate-400">
+          <div className="grid grid-cols-14 gap-2 border-b border-slate-800 bg-slate-950/70 px-4 py-3 text-xs uppercase text-slate-400">
             <span className="col-span-3">{t(locale, "common.merchant")}</span>
-            <span className="col-span-2">
-              {t(locale, "common.category")} / {t(locale, "common.purpose")}
-            </span>
+            <span className="col-span-2">{t(locale, "common.category")}</span>
+            <span className="col-span-2">{t(locale, "common.purpose")}</span>
             <span className="col-span-2">{t(locale, "common.date")}</span>
             <span className="col-span-2">{t(locale, "common.amount")}</span>
             <span className="col-span-2">{t(locale, "expenses.dopTotal")}</span>

@@ -116,16 +116,12 @@ export default function ExpenseRow({
 
   return (
     <div className="px-4 py-3">
-      <div className="grid grid-cols-12 gap-2 text-sm text-slate-200">
+      <div className="grid grid-cols-14 gap-2 text-sm text-slate-200">
         <span className="col-span-3 text-slate-100">
           {expense.merchants?.name ?? "—"}
         </span>
-        <span className="col-span-2 text-slate-300">
-          <span className="block">{expense.categories?.name ?? "—"}</span>
-          <span className="mt-1 block text-xs text-slate-500">
-            {expense.purposes?.name ?? "—"}
-          </span>
-        </span>
+        <span className="col-span-2 text-slate-300">{expense.categories?.name ?? "—"}</span>
+        <span className="col-span-2 text-slate-500">{expense.purposes?.name ?? "—"}</span>
         <span className="col-span-2 text-slate-400">
           {formatDate(expense.expense_date, locale)}
         </span>
