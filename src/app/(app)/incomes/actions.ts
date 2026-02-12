@@ -114,3 +114,88 @@ export async function deleteIncome(formData: FormData) {
   revalidatePath("/incomes");
   revalidatePath("/dashboard");
 }
+
+export async function updateIncome(
+  _prevState: IncomeActionState,
+  formData: FormData
+): Promise<IncomeActionState> {
+  const locale = normalizeLocale(String(formData.get("locale") ?? ""));
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { message: t(locale, "errors.signInRequired") };
+  }
+
+  const id = String(formData.get("id") ?? "").trim();
+  const amountRaw = String(formData.get("amount") ?? "").trim();
+  const currencyRaw = String(formData.get("currency") ?? "")
+    .trim()
+    .toUpperCase();
+  const incomeDate = String(formData.get("income_date") ?? "").trim();
+  const source = String(formData.get("source") ?? "").trim();
+  const notes = String(formData.get("notes") ?? "").trim();
+  const fxRateRaw = String(formData.get("fx_rate_to_dop") ?? "").trim();
+
+  if (!id) {
+    return { message: t(locale, "income.updateFailed") };
+  }
+
+  if (!amountRaw || Number.isNaN(Number(amountRaw))) {
+    return { message: t(locale, "income.amountRequired") };
+  }
+
+  if (countIntegerDigits(amountRaw) > MAX_INTEGER_DIGITS) {
+    return { message: t(locale, "income.amountTooLarge") };
+  }
+
+  if (!currencyRaw) {
+    return { message: t(locale, "income.currencyRequired") };
+  }
+
+  if (!incomeDate) {
+    return { message: t(locale, "income.dateRequired") };
+  }
+
+  const amount = Number(amountRaw);
+  const currency = currencyRaw;
+
+  let fxRate = 1;
+  if (currency !== "DOP") {
+    if (!fxRateRaw || Number.isNaN(Number(fxRateRaw))) {
+      return { message: t(locale, "income.fxRateRequired") };
+    }
+    fxRate = Number(fxRateRaw);
+  }
+
+  const amountDop = Number((amount * fxRate).toFixed(2));
+
+  if (countIntegerDigits(amountDop) > MAX_INTEGER_DIGITS) {
+    return { message: t(locale, "income.convertedTooLarge") };
+  }
+
+  const { error } = await supabase
+    .from("incomes")
+    .update({
+      amount,
+      currency,
+      fx_rate_to_dop: currency === "DOP" ? null : fxRate,
+      amount_dop: amountDop,
+      income_date: incomeDate,
+      source: source || null,
+      notes: notes || null,
+    })
+    .eq("id", id)
+    .eq("user_id", user.id);
+
+  if (error) {
+    return { message: error.message };
+  }
+
+  revalidatePath("/incomes");
+  revalidatePath("/dashboard");
+
+  return { message: t(locale, "income.updated") };
+}

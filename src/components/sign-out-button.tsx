@@ -22,7 +22,7 @@ export default function SignOutButton({ label = "Sign out" }: SignOutButtonProps
     <button
       type="button"
       onClick={handleSignOut}
-      className="rounded-full border border-slate-700 px-4 py-2 text-xs font-semibold text-slate-200 transition hover:border-slate-500"
+      className="min-w-[110px] rounded-full border border-slate-700 px-4 py-2 text-center text-xs font-semibold text-slate-200 transition hover:border-slate-500"
     >
       {label}
     </button>

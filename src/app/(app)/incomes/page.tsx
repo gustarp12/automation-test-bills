@@ -3,13 +3,13 @@ import { redirect } from "next/navigation";
 
 import IncomeForm from "./income-form";
 import IncomeCsvImport from "./csv-import";
-import { deleteIncome } from "./actions";
+import IncomeRow from "./income-row";
+import DateFilterInput from "@/components/date-filter-input";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { formatCurrency, formatDate } from "@/lib/format";
 import { getLocale } from "@/lib/i18n-server";
 import { t } from "@/lib/i18n";
 
-type IncomeRow = {
+type IncomeRowData = {
   id: string;
   amount: string;
   currency: string;
@@ -17,6 +17,7 @@ type IncomeRow = {
   income_date: string;
   source: string | null;
   notes: string | null;
+  fx_rate_to_dop?: string | null;
 };
 
 type SearchParams = {
@@ -58,7 +59,7 @@ export default async function IncomesPage({
 
   let incomesQuery = supabase
     .from("incomes")
-    .select("id, amount, currency, amount_dop, income_date, source, notes")
+    .select("id, amount, currency, amount_dop, income_date, source, notes, fx_rate_to_dop")
     .order("income_date", { ascending: false });
 
   if (filters.from) {
@@ -147,24 +148,8 @@ export default async function IncomesPage({
         </div>
 
         <form className="grid gap-3 rounded-2xl border border-slate-800/80 bg-slate-950/70 p-4 backdrop-blur md:grid-cols-4">
-          <label className="text-xs text-slate-300">
-            {t(locale, "common.from")}
-            <input
-              name="from"
-              type="date"
-              defaultValue={filters.from ?? ""}
-              className="mt-1 w-full rounded-lg border border-slate-800 bg-slate-950/80 px-3 py-2 text-xs text-slate-100 outline-none focus:border-emerald-400"
-            />
-          </label>
-          <label className="text-xs text-slate-300">
-            {t(locale, "common.to")}
-            <input
-              name="to"
-              type="date"
-              defaultValue={filters.to ?? ""}
-              className="mt-1 w-full rounded-lg border border-slate-800 bg-slate-950/80 px-3 py-2 text-xs text-slate-100 outline-none focus:border-emerald-400"
-            />
-          </label>
+          <DateFilterInput name="from" label={t(locale, "common.from")} defaultValue={filters.from ?? ""} />
+          <DateFilterInput name="to" label={t(locale, "common.to")} defaultValue={filters.to ?? ""} />
           <label className="text-xs text-slate-300">
             {t(locale, "common.currency")}
             <select
@@ -197,57 +182,37 @@ export default async function IncomesPage({
           <div className="col-span-full flex flex-wrap gap-2">
             <button
               type="submit"
-              className="rounded-full bg-emerald-400 px-4 py-2 text-xs font-semibold text-slate-950 transition hover:bg-emerald-300"
+              className="min-w-[120px] rounded-full bg-emerald-400 px-4 py-2 text-xs font-semibold text-slate-950 transition hover:bg-emerald-300"
             >
               {t(locale, "common.applyFilters")}
             </button>
             <Link
               href="/incomes"
-              className="rounded-full border border-slate-700 px-4 py-2 text-xs font-semibold text-slate-200 transition hover:border-slate-500"
+              className="min-w-[120px] rounded-full border border-slate-700 px-4 py-2 text-center text-xs font-semibold text-slate-200 transition hover:border-slate-500"
             >
               {t(locale, "common.clear")}
             </Link>
           </div>
         </form>
         <div className="overflow-hidden rounded-2xl border border-slate-800/80">
-          <div className="grid grid-cols-12 gap-2 border-b border-slate-800 bg-slate-950/70 px-4 py-3 text-xs uppercase text-slate-400">
+          <div className="grid grid-cols-14 gap-2 border-b border-slate-800 bg-slate-950/70 px-4 py-3 text-xs uppercase text-slate-400">
             <span className="col-span-4">{t(locale, "income.source")}</span>
             <span className="col-span-3">{t(locale, "common.date")}</span>
             <span className="col-span-3">{t(locale, "common.amount")}</span>
             <span className="col-span-2">{t(locale, "common.notes")}</span>
+            <span className="col-span-2 text-right">{t(locale, "common.actions")}</span>
           </div>
           <div className="divide-y divide-slate-900/60">
             {pageRows.length === 0 ? (
               <p className="px-4 py-6 text-sm text-slate-500">{t(locale, "income.none")}</p>
             ) : (
-              (pageRows as IncomeRow[]).map((income) => (
-                <div
+              (pageRows as IncomeRowData[]).map((income) => (
+                <IncomeRow
                   key={income.id}
-                  className="grid grid-cols-12 gap-2 px-4 py-3 text-sm text-slate-200"
-                >
-                  <span className="col-span-4">{income.source ?? "—"}</span>
-                  <span className="col-span-3 text-slate-400">
-                    {formatDate(income.income_date, locale)}
-                  </span>
-                  <span className="col-span-3 text-emerald-300">
-                    {formatCurrency(income.amount, income.currency, locale)}
-                    <span className="ml-2 text-xs text-slate-500">
-                      {formatCurrency(income.amount_dop, "DOP", locale)}
-                    </span>
-                  </span>
-                  <span className="col-span-2 flex items-center justify-between text-xs text-slate-400">
-                    {income.notes ?? "—"}
-                    <form action={deleteIncome}>
-                      <input type="hidden" name="id" value={income.id} />
-                      <button
-                        type="submit"
-                        className="ml-2 text-xs text-rose-300 hover:text-rose-200"
-                      >
-                        {t(locale, "common.delete")}
-                      </button>
-                    </form>
-                  </span>
-                </div>
+                  income={income}
+                  currencies={activeCurrencies}
+                  locale={locale}
+                />
               ))
             )}
           </div>

@@ -1,13 +1,13 @@
 import { redirect } from "next/navigation";
 
 import BudgetForm from "./budget-form";
-import { deleteBudget } from "./actions";
+import BudgetRow from "./budget-row";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { formatCurrency } from "@/lib/format";
 import { getLocale } from "@/lib/i18n-server";
 import { t } from "@/lib/i18n";
 
-type BudgetRow = {
+type BudgetRowData = {
   id: string;
   amount: string | number;
   month: string;
@@ -85,7 +85,7 @@ export default async function BudgetsPage({
       categories: Array.isArray(categoriesValue)
         ? categoriesValue[0] ?? null
         : categoriesValue ?? null,
-    } as BudgetRow;
+    } as BudgetRowData;
   });
 
   return (
@@ -155,31 +155,7 @@ export default async function BudgetsPage({
             <p className="text-sm text-slate-500">{t(locale, "budgets.none")}</p>
           ) : (
             budgets.map((budget) => (
-              <div
-                key={budget.id}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-950/40 px-4 py-2 text-sm"
-              >
-                <div>
-                  <p className="font-medium">{budget.categories?.name ?? "—"}</p>
-                  <p className="text-xs text-slate-500">
-                    {t(locale, "budgets.monthLabel")} {budget.month}
-                  </p>
-                </div>
-                <div className="flex items-center gap-4">
-                  <span className="text-sm font-semibold">
-                    {formatCurrency(Number(budget.amount), "DOP", locale)}
-                  </span>
-                  <form action={deleteBudget}>
-                    <input type="hidden" name="id" value={budget.id} />
-                    <button
-                      type="submit"
-                      className="text-xs text-rose-300 hover:text-rose-200"
-                    >
-                      {t(locale, "common.delete")}
-                    </button>
-                  </form>
-                </div>
-              </div>
+              <BudgetRow key={budget.id} budget={budget} locale={locale} />
             ))
           )}
         </div>

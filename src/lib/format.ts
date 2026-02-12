@@ -25,9 +25,14 @@ export function formatDate(dateValue: string, locale: Locale = "es") {
     return dateValue;
   }
 
-  const localeTag = locale === "es" ? "es-DO" : "en-US";
+  if (locale === "es") {
+    const day = String(date.getDate()).padStart(2, "0");
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const year = String(date.getFullYear());
+    return `${day}-${month}-${year}`;
+  }
 
-  return new Intl.DateTimeFormat(localeTag, {
+  return new Intl.DateTimeFormat("en-US", {
     year: "numeric",
     month: "short",
     day: "numeric",

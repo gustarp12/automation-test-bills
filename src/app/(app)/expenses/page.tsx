@@ -5,6 +5,7 @@ import ExpenseForm from "./expense-form";
 import CsvImport from "./csv-import";
 import ExpenseRow from "./expense-row";
 import StatementImport from "./statement-import";
+import DateFilterInput from "@/components/date-filter-input";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getLocale } from "@/lib/i18n-server";
 import { t } from "@/lib/i18n";
@@ -234,24 +235,8 @@ export default async function ExpensesPage({
         </div>
 
         <form className="grid gap-3 rounded-2xl border border-slate-800/80 bg-slate-950/70 p-4 backdrop-blur md:grid-cols-7">
-          <label className="text-xs text-slate-300">
-            {t(locale, "common.from")}
-            <input
-              name="from"
-              type="date"
-              defaultValue={filters.from ?? ""}
-              className="mt-1 w-full rounded-lg border border-slate-800 bg-slate-950/80 px-3 py-2 text-xs text-slate-100 outline-none focus:border-emerald-400"
-            />
-          </label>
-          <label className="text-xs text-slate-300">
-            {t(locale, "common.to")}
-            <input
-              name="to"
-              type="date"
-              defaultValue={filters.to ?? ""}
-              className="mt-1 w-full rounded-lg border border-slate-800 bg-slate-950/80 px-3 py-2 text-xs text-slate-100 outline-none focus:border-emerald-400"
-            />
-          </label>
+          <DateFilterInput name="from" label={t(locale, "common.from")} defaultValue={filters.from ?? ""} />
+          <DateFilterInput name="to" label={t(locale, "common.to")} defaultValue={filters.to ?? ""} />
           <label className="text-xs text-slate-300">
             {t(locale, "common.category")}
             <select
@@ -329,13 +314,13 @@ export default async function ExpensesPage({
           <div className="col-span-full flex flex-wrap gap-2">
             <button
               type="submit"
-              className="rounded-full bg-emerald-400 px-4 py-2 text-xs font-semibold text-slate-950 transition hover:bg-emerald-300"
+              className="min-w-[120px] rounded-full bg-emerald-400 px-4 py-2 text-xs font-semibold text-slate-950 transition hover:bg-emerald-300"
             >
               {t(locale, "common.applyFilters")}
             </button>
             <Link
               href="/expenses"
-              className="rounded-full border border-slate-700 px-4 py-2 text-xs font-semibold text-slate-200 transition hover:border-slate-500"
+              className="min-w-[120px] rounded-full border border-slate-700 px-4 py-2 text-center text-xs font-semibold text-slate-200 transition hover:border-slate-500"
             >
               {t(locale, "common.clear")}
             </Link>

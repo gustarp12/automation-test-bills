@@ -1,10 +1,6 @@
 import type { ReactNode } from "react";
-import Link from "next/link";
-
 import { LocaleProvider } from "@/components/locale-provider";
-import LanguageSwitcher from "@/components/language-switcher";
-import SignOutButton from "@/components/sign-out-button";
-import { t } from "@/lib/i18n";
+import AppHeader from "@/components/app-header";
 import { getLocale } from "@/lib/i18n-server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -26,49 +22,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       <div className="relative min-h-screen overflow-hidden bg-slate-950 text-slate-100">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.12),_rgba(15,23,42,0.2),_rgba(2,6,23,0.9))]" />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_20%,_rgba(56,189,248,0.12),_transparent_55%)]" />
-        <header className="relative z-10 border-b border-slate-900/80 bg-slate-950/70 backdrop-blur">
-          <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-6 py-4">
-            <div className="flex items-center gap-6 text-sm">
-              <Link href="/dashboard" className="font-semibold text-slate-100">
-                {t(locale, "common.appName")}
-              </Link>
-              <nav className="flex flex-wrap items-center gap-4 text-slate-400">
-                <Link className="hover:text-slate-200" href="/expenses">
-                  {t(locale, "nav.expenses")}
-                </Link>
-                <Link className="hover:text-slate-200" href="/incomes">
-                  {t(locale, "nav.income")}
-                </Link>
-                <Link className="hover:text-slate-200" href="/budgets">
-                  {t(locale, "nav.budgets")}
-                </Link>
-                {isAdmin ? (
-                  <>
-                    <Link className="hover:text-slate-200" href="/categories">
-                      {t(locale, "nav.categories")}
-                    </Link>
-                    <Link className="hover:text-slate-200" href="/purposes">
-                      {t(locale, "nav.purposes")}
-                    </Link>
-                    <Link className="hover:text-slate-200" href="/merchants">
-                      {t(locale, "nav.merchants")}
-                    </Link>
-                    <Link className="hover:text-slate-200" href="/currencies">
-                      {t(locale, "nav.currencies")}
-                    </Link>
-                    <Link className="hover:text-slate-200" href="/admin">
-                      {t(locale, "nav.admin")}
-                    </Link>
-                  </>
-                ) : null}
-              </nav>
-            </div>
-            <div className="flex items-center gap-3">
-              <LanguageSwitcher locale={locale} />
-              <SignOutButton label={t(locale, "common.signOut")} />
-            </div>
-          </div>
-        </header>
+        <AppHeader locale={locale} isAdmin={isAdmin} />
         <main className="relative z-10 mx-auto max-w-6xl px-6 py-8">{children}</main>
       </div>
     </LocaleProvider>

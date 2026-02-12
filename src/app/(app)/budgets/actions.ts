@@ -82,3 +82,46 @@ export async function deleteBudget(formData: FormData) {
   revalidatePath("/budgets");
   revalidatePath("/dashboard");
 }
+
+export async function updateBudget(
+  _prevState: BudgetActionState,
+  formData: FormData
+): Promise<BudgetActionState> {
+  const locale = normalizeLocale(String(formData.get("locale") ?? ""));
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { message: t(locale, "errors.signInRequired") };
+  }
+
+  const id = String(formData.get("id") ?? "").trim();
+  const amountRaw = String(formData.get("amount") ?? "").trim();
+
+  if (!id) {
+    return { message: t(locale, "budgets.updateFailed") };
+  }
+
+  if (!amountRaw || Number.isNaN(Number(amountRaw))) {
+    return { message: t(locale, "budgets.amountRequired") };
+  }
+
+  const amount = Number(Number(amountRaw).toFixed(2));
+
+  const { error } = await supabase
+    .from("budgets")
+    .update({ amount })
+    .eq("id", id)
+    .eq("user_id", user.id);
+
+  if (error) {
+    return { message: error.message };
+  }
+
+  revalidatePath("/budgets");
+  revalidatePath("/dashboard");
+
+  return { message: t(locale, "budgets.updated") };
+}

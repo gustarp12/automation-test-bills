@@ -37,7 +37,7 @@ function SubmitButton({ label, disabled }: { label: string; disabled?: boolean }
     <button
       type="submit"
       disabled={isDisabled}
-      className="rounded-xl bg-emerald-400 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-70"
+      className="min-w-[140px] rounded-xl bg-emerald-400 px-5 py-3 text-center text-sm font-semibold text-slate-950 transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-70"
     >
       {pending ? `${label}...` : label}
     </button>
