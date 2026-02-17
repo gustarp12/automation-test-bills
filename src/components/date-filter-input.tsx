@@ -1,15 +1,24 @@
 "use client";
 
-import { useRef } from "react";
+import { type ChangeEvent, useRef } from "react";
 
 type DateFilterInputProps = {
-  name: string;
+  name?: string;
   label: string;
   defaultValue?: string;
+  value?: string;
+  onChange?: (value: string) => void;
 };
 
-export default function DateFilterInput({ name, label, defaultValue = "" }: DateFilterInputProps) {
+export default function DateFilterInput({
+  name,
+  label,
+  defaultValue = "",
+  value,
+  onChange,
+}: DateFilterInputProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const isControlled = typeof value === "string";
 
   return (
     <label className="text-xs text-slate-300">
@@ -19,7 +28,13 @@ export default function DateFilterInput({ name, label, defaultValue = "" }: Date
           ref={inputRef}
           name={name}
           type="date"
-          defaultValue={defaultValue}
+          {...(isControlled
+            ? {
+                value,
+                onChange: (event: ChangeEvent<HTMLInputElement>) =>
+                  onChange?.(event.target.value),
+              }
+            : { defaultValue })}
           className="w-full rounded-lg border border-slate-800 bg-slate-950/80 px-3 py-2 pr-10 text-xs text-slate-100 outline-none focus:border-emerald-400"
         />
         <button

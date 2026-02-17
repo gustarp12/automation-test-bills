@@ -1,24 +1,11 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import IncomeForm from "./income-form";
 import IncomeCsvImport from "./csv-import";
-import IncomeRow from "./income-row";
-import DateFilterInput from "@/components/date-filter-input";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import IncomeForm from "./income-form";
+import IncomesTable from "./incomes-table";
 import { getLocale } from "@/lib/i18n-server";
 import { t } from "@/lib/i18n";
-
-type IncomeRowData = {
-  id: string;
-  amount: string;
-  currency: string;
-  amount_dop: string;
-  income_date: string;
-  source: string | null;
-  notes: string | null;
-  fx_rate_to_dop?: string | null;
-};
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type SearchParams = {
   from?: string;
@@ -57,60 +44,11 @@ export default async function IncomesPage({
     ? []
     : (currencies ?? []).filter((currency) => currency.is_active);
 
-  let incomesQuery = supabase
-    .from("incomes")
-    .select("id, amount, currency, amount_dop, income_date, source, notes, fx_rate_to_dop")
-    .order("income_date", { ascending: false });
-
-  if (filters.from) {
-    incomesQuery = incomesQuery.gte("income_date", filters.from);
-  }
-  if (filters.to) {
-    incomesQuery = incomesQuery.lte("income_date", filters.to);
-  }
-  if (filters.currency) {
-    incomesQuery = incomesQuery.eq("currency", filters.currency.toUpperCase());
-  }
-
-  const page = Math.max(1, Number(filters.page ?? "1") || 1);
   const requestedPageSize = Number(filters.pageSize ?? "");
   const pageSize = ALLOWED_PAGE_SIZES.includes(requestedPageSize)
     ? requestedPageSize
     : DEFAULT_PAGE_SIZE;
-  const offset = (page - 1) * pageSize;
-
-  const { data: incomesRaw } = await incomesQuery.range(offset, offset + pageSize);
-  const hasNext = (incomesRaw ?? []).length > pageSize;
-  const pageRows = (incomesRaw ?? []).slice(0, pageSize);
-  const showingStart = pageRows.length > 0 ? offset + 1 : 0;
-  const showingEnd = offset + pageRows.length;
-
-  const exportParams = new URLSearchParams();
-  if (filters.from) exportParams.set("from", filters.from);
-  if (filters.to) exportParams.set("to", filters.to);
-  if (filters.currency) exportParams.set("currency", filters.currency);
-  exportParams.set("locale", locale);
-
-  const exportHref = exportParams.toString()
-    ? `/api/incomes/export?${exportParams.toString()}`
-    : "/api/incomes/export";
-
-  const pageParams = new URLSearchParams();
-  if (filters.from) pageParams.set("from", filters.from);
-  if (filters.to) pageParams.set("to", filters.to);
-  if (filters.currency) pageParams.set("currency", filters.currency);
-  if (pageSize !== DEFAULT_PAGE_SIZE) pageParams.set("pageSize", String(pageSize));
-
-  const buildPageHref = (targetPage: number) => {
-    const params = new URLSearchParams(pageParams);
-    if (targetPage > 1) {
-      params.set("page", String(targetPage));
-    } else {
-      params.delete("page");
-    }
-    const qs = params.toString();
-    return qs ? `/incomes?${qs}` : "/incomes";
-  };
+  const page = Math.max(1, Number(filters.page ?? "1") || 1);
 
   return (
     <div className="space-y-8">
@@ -125,156 +63,17 @@ export default async function IncomesPage({
       <IncomeForm currencies={activeCurrencies} locale={locale} />
       <IncomeCsvImport currencies={activeCurrencies} locale={locale} />
 
-      <section className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="text-lg font-semibold">{t(locale, "income.recent")}</h2>
-            <p className="text-xs text-slate-500">{t(locale, "income.recentNote")}</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <Link
-              href="/templates/incomes_template.csv"
-              className="rounded-full border border-slate-700 px-4 py-2 text-xs font-semibold text-slate-200 transition hover:border-slate-500"
-            >
-              {t(locale, "common.downloadTemplate")}
-            </Link>
-            <a
-              href={exportHref}
-              className="rounded-full border border-slate-700 px-4 py-2 text-xs font-semibold text-slate-200 transition hover:border-slate-500"
-            >
-              {t(locale, "common.exportCsv")}
-            </a>
-          </div>
-        </div>
-
-        <form className="grid gap-3 rounded-2xl border border-slate-800/80 bg-slate-950/70 p-4 backdrop-blur md:grid-cols-4">
-          <DateFilterInput name="from" label={t(locale, "common.from")} defaultValue={filters.from ?? ""} />
-          <DateFilterInput name="to" label={t(locale, "common.to")} defaultValue={filters.to ?? ""} />
-          <label className="text-xs text-slate-300">
-            {t(locale, "common.currency")}
-            <select
-              name="currency"
-              defaultValue={filters.currency ?? ""}
-              className="mt-1 w-full rounded-lg border border-slate-800 bg-slate-950/80 px-3 py-2 text-xs text-slate-100 outline-none focus:border-emerald-400"
-            >
-              <option value=""></option>
-              {activeCurrencies.map((currency) => (
-                <option key={currency.code} value={currency.code}>
-                  {currency.code}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="text-xs text-slate-300">
-            {t(locale, "common.pageSize")}
-            <select
-              name="pageSize"
-              defaultValue={String(pageSize)}
-              className="mt-1 w-full rounded-lg border border-slate-800 bg-slate-950/80 px-3 py-2 text-xs text-slate-100 outline-none focus:border-emerald-400"
-            >
-              {ALLOWED_PAGE_SIZES.map((size) => (
-                <option key={size} value={size}>
-                  {size}
-                </option>
-              ))}
-            </select>
-          </label>
-          <div className="col-span-full flex flex-wrap gap-2">
-            <button
-              type="submit"
-              className="min-w-[120px] rounded-full bg-emerald-400 px-4 py-2 text-xs font-semibold text-slate-950 transition hover:bg-emerald-300"
-            >
-              {t(locale, "common.applyFilters")}
-            </button>
-            <Link
-              href="/incomes"
-              className="min-w-[120px] rounded-full border border-slate-700 px-4 py-2 text-center text-xs font-semibold text-slate-200 transition hover:border-slate-500"
-            >
-              {t(locale, "common.clear")}
-            </Link>
-          </div>
-        </form>
-        <div className="overflow-hidden rounded-2xl border border-slate-800/80">
-          <div className="grid grid-cols-14 gap-2 border-b border-slate-800 bg-slate-950/70 px-4 py-3 text-xs uppercase text-slate-400">
-            <span className="col-span-4">{t(locale, "income.source")}</span>
-            <span className="col-span-3">{t(locale, "common.date")}</span>
-            <span className="col-span-3">{t(locale, "common.amount")}</span>
-            <span className="col-span-2">{t(locale, "common.notes")}</span>
-            <span className="col-span-2 text-right">{t(locale, "common.actions")}</span>
-          </div>
-          <div className="divide-y divide-slate-900/60">
-            {pageRows.length === 0 ? (
-              <p className="px-4 py-6 text-sm text-slate-500">{t(locale, "income.none")}</p>
-            ) : (
-              (pageRows as IncomeRowData[]).map((income) => (
-                <IncomeRow
-                  key={income.id}
-                  income={income}
-                  currencies={activeCurrencies}
-                  locale={locale}
-                />
-              ))
-            )}
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-800/80 bg-slate-950/60 px-4 py-3 text-xs text-slate-400 backdrop-blur">
-          <div className="space-y-1">
-            <span>
-              {t(locale, "common.page")} {page}
-            </span>
-            <span className="block text-xs text-slate-500">
-              {t(locale, "common.showingRange")
-                .replace("{start}", String(showingStart))
-                .replace("{end}", String(showingEnd))}
-            </span>
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <Link
-              href={buildPageHref(page - 1)}
-              className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${
-                page <= 1
-                  ? "border-slate-800 text-slate-600"
-                  : "border-slate-700 text-slate-200 hover:border-slate-500"
-              }`}
-            >
-              {t(locale, "common.previous")}
-            </Link>
-            <Link
-              href={hasNext ? buildPageHref(page + 1) : buildPageHref(page)}
-              className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${
-                hasNext
-                  ? "border-slate-700 text-slate-200 hover:border-slate-500"
-                  : "border-slate-800 text-slate-600"
-              }`}
-            >
-              {t(locale, "common.next")}
-            </Link>
-            <form method="get" className="flex items-center gap-2 text-xs">
-              <input type="hidden" name="from" value={filters.from ?? ""} />
-              <input type="hidden" name="to" value={filters.to ?? ""} />
-              <input type="hidden" name="currency" value={filters.currency ?? ""} />
-              <input type="hidden" name="pageSize" value={String(pageSize)} />
-              <label className="flex items-center gap-2">
-                <span className="text-slate-400">{t(locale, "common.jumpToPage")}</span>
-                <input
-                  name="page"
-                  type="number"
-                  min={1}
-                  defaultValue={page}
-                  className="w-20 rounded-lg border border-slate-800 bg-slate-950/80 px-2 py-1 text-xs text-slate-100 outline-none focus:border-emerald-400"
-                />
-              </label>
-              <button
-                type="submit"
-                className="rounded-full border border-slate-700 px-3 py-1 text-xs font-semibold text-slate-200 transition hover:border-slate-500"
-              >
-                {t(locale, "common.go")}
-              </button>
-            </form>
-          </div>
-        </div>
-      </section>
+      <IncomesTable
+        locale={locale}
+        currencies={activeCurrencies}
+        initialFilters={{
+          from: filters.from ?? "",
+          to: filters.to ?? "",
+          currency: filters.currency ?? "",
+          page,
+          pageSize,
+        }}
+      />
     </div>
   );
 }
