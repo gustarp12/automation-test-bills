@@ -331,15 +331,31 @@ export default function IncomesTable({ locale, currencies, initialFilters }: Inc
           <span className="col-span-2">{t(locale, "common.notes")}</span>
           <span className="col-span-2 text-right">{t(locale, "common.actions")}</span>
         </div>
-        <div className="divide-y divide-slate-900/60">
-          {isLoading ? (
-            <p className="px-4 py-6 text-sm text-slate-500">{t(locale, "common.loading")}</p>
-          ) : error ? (
+        <div className="relative min-h-[260px] divide-y divide-slate-900/60">
+          {error ? (
             <p className="px-4 py-6 text-sm text-rose-300">{error}</p>
           ) : rows.length === 0 ? (
-            <p className="px-4 py-6 text-sm text-slate-500">{t(locale, "income.none")}</p>
+            <p className="px-4 py-6 text-sm text-slate-500">
+              {isLoading ? t(locale, "common.loading") : t(locale, "income.none")}
+            </p>
           ) : (
-            rows.map((income) => <IncomeRow key={income.id} income={income} currencies={currencies} locale={locale} />)
+            <>
+              <div className={isLoading ? "opacity-70 transition-opacity" : "transition-opacity"}>
+                {rows.map((income) => (
+                  <IncomeRow
+                    key={income.id}
+                    income={income}
+                    currencies={currencies}
+                    locale={locale}
+                  />
+                ))}
+              </div>
+              {isLoading ? (
+                <div className="pointer-events-none absolute right-3 top-3 rounded-full border border-slate-700 bg-slate-900/80 px-3 py-1 text-[11px] text-slate-300">
+                  {t(locale, "common.updating")}
+                </div>
+              ) : null}
+            </>
           )}
         </div>
       </div>

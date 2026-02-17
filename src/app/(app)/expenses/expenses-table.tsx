@@ -418,25 +418,34 @@ export default function ExpensesTable({
           <span className="col-span-1">{t(locale, "common.notes")}</span>
           <span className="col-span-2 text-right">{t(locale, "common.actions")}</span>
         </div>
-        <div className="divide-y divide-slate-900/60">
-          {isLoading ? (
-            <div className="px-4 py-6 text-sm text-slate-400">{t(locale, "common.loading")}</div>
-          ) : error ? (
+        <div className="relative min-h-[320px] divide-y divide-slate-900/60">
+          {error ? (
             <div className="px-4 py-6 text-sm text-rose-300">{error}</div>
           ) : rows.length === 0 ? (
-            <div className="px-4 py-6 text-sm text-slate-400">{t(locale, "common.noExpenses")}</div>
+            <div className="px-4 py-6 text-sm text-slate-400">
+              {isLoading ? t(locale, "common.loading") : t(locale, "common.noExpenses")}
+            </div>
           ) : (
-            rows.map((expense) => (
-              <ExpenseRow
-                key={expense.id}
-                expense={expense}
-                categories={categories}
-                purposes={purposes}
-                merchants={merchants}
-                currencies={currencies}
-                locale={locale}
-              />
-            ))
+            <>
+              <div className={isLoading ? "opacity-70 transition-opacity" : "transition-opacity"}>
+                {rows.map((expense) => (
+                  <ExpenseRow
+                    key={expense.id}
+                    expense={expense}
+                    categories={categories}
+                    purposes={purposes}
+                    merchants={merchants}
+                    currencies={currencies}
+                    locale={locale}
+                  />
+                ))}
+              </div>
+              {isLoading ? (
+                <div className="pointer-events-none absolute right-3 top-3 rounded-full border border-slate-700 bg-slate-900/80 px-3 py-1 text-[11px] text-slate-300">
+                  {t(locale, "common.updating")}
+                </div>
+              ) : null}
+            </>
           )}
         </div>
       </div>
